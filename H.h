@@ -372,13 +372,8 @@ type_from( double ) r8;
 
 ///////
 
-#if OS_LINUX
-	#define print( BYTES ) fputs_unlocked( BYTES, stdout )
-	#define print_size( BYTES, SIZE ) fwrite_unlocked( BYTES, 1, SIZE, stdout )
-#elif OS_WINDOWS
-	#define print( BYTES ) _fputs_nolock( BYTES, stdout )
-	#define print_size( BYTES, SIZE ) _fwrite_nolock( BYTES, 1, SIZE, stdout )
-#endif
+#define print( BYTES ) fputs( BYTES, stdout )
+#define print_size( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
 
 #define print_newline( ... ) print_size( "\n", 1 )
 
