@@ -199,8 +199,8 @@ type_from( _Bool ) flag;
 
 ///////
 
-#define embed inline __attribute__( ( always_inline ) )
-#define fn anon
+#define embed static inline __attribute__( ( always_inline ) )
+#define fn embed anon
 #define out return
 //
 #define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
