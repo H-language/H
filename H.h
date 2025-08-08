@@ -24,6 +24,10 @@
 	#include <fcntl.h>
 	#include <unistd.h>
 	#define SEPARATOR "/"
+#ifdef C7H16
+	#include <X11/Xlib.h>
+	#include <X11/Xutil.h>
+#endif
 	//
 #elif defined( _WIN32 )
 	#undef OS_WINDOWS
@@ -177,7 +181,7 @@
 //
 #define size_of( TYPE... ) sizeof( TYPE )
 #define type_of( VAR... ) typeof( VAR )
-#define type_of_ref( REF... ) type_of( val_of( to( REF, nothing ) ) )
+#define type_of_ref( REF... ) type_of( val_of( to( type_of( REF ), nothing ) ) )
 
 ///////
 
@@ -199,7 +203,7 @@ type_from( _Bool ) flag;
 
 ///////
 
-#define embed static inline __attribute__( ( always_inline ) )
+#define embed perm inline __attribute__( ( always_inline ) )
 #define fn embed anon
 #define out return
 //
@@ -338,8 +342,53 @@ type_from( double ) r8;
 
 ///////
 
-#define new_ref( TYPE, AMOUNT... ) calloc( size_of( TYPE ), DEFAULT( 1, AMOUNT ) )
+#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( size_of( TYPE ), DEFAULT( 1, AMOUNT ) ) )
 #define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
+
+#define bytes_copy( FROM_REF, FROM_SIZE, TO_REF ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
+#define bytes_copy_until( FROM_REF, TO_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
+#define bytes_copy_until_any( FROM_REF, TO_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
+#define bytes_copy_within( FROM_REF, FROM_SIZE, TO_REF ) memmove( TO_REF, FROM_REF, FROM_SIZE )
+#define bytes_paste( FROM_REF, TO_REF ) strcpy( TO_REF, FROM_REF )
+#define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
+#define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
+#define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
+#define bytes_measure( REF ) strlen( REF )
+
+#define bytes_copy_move( FROM_REF, FROM_SIZE, TO_REF )\
+	START_DEF\
+	{\
+		bytes_copy( FROM_REF, FROM_SIZE, TO_REF );\
+		TO_REF += FROM_SIZE;\
+	}\
+	END_DEF
+
+#define bytes_paste_move( FROM_REF, TO_REF )\
+	START_DEF\
+	{\
+		temp const n2 _PASTE_SIZE = bytes_measure( FROM_REF );\
+		bytes_copy_move( FROM_REF, _PASTE_SIZE, TO_REF );\
+	}\
+	END_DEF
+
+#define bytes_set_move( BYTE, TO_REF ) val_of( TO_REF++ ) = BYTE
+
+#define bytes_end( BYTES ) val_of( BYTES ) = '\0'
+
+embed anon ref _ref_resize( const anon ref r, size_t type_size, size_t old_count, size_t new_count )
+{
+	temp anon ref new_ptr = realloc( r, type_size * new_count );
+	if( new_ptr isnt nothing and new_count > old_count )
+	{
+		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
+	}
+	out new_ptr;
+}
+#define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
+
+#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
+
+///////
 
 #define PACKED __attribute__( ( packed ) )
 
@@ -359,7 +408,10 @@ type_from( double ) r8;
 
 //
 
-#define fusion( NAME ) union PACKED NAME
+#define fusion( NAME )\
+	type_from( union NAME ) NAME;\
+	union PACKED NAME
+
 #define group( NAME, TYPE... )\
 	type_from( DEFAULT( byte, TYPE ) ) NAME;\
 	enum NAME
@@ -431,38 +483,6 @@ type_from( double ) r8;
 #define _args_next_r8 double
 #define _args_next_ref long ref
 #define args_next( ARGS, TYPE ) va_arg( ARGS, _args_next_##TYPE )
-
-///////
-
-#define bytes_copy( FROM_REF, FROM_SIZE, TO_REF ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
-#define bytes_copy_until( FROM_REF, TO_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
-#define bytes_copy_until_any( FROM_REF, TO_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
-#define bytes_copy_within( FROM_REF, FROM_SIZE, TO_REF ) memmove( TO_REF, FROM_REF, FROM_SIZE )
-#define bytes_paste( FROM_REF, TO_REF ) strcpy( TO_REF, FROM_REF )
-#define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
-#define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
-#define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
-#define bytes_measure( REF ) strlen( REF )
-
-#define bytes_copy_move( FROM_REF, FROM_SIZE, TO_REF )\
-	START_DEF\
-	{\
-		bytes_copy( FROM_REF, FROM_SIZE, TO_REF );\
-		TO_REF += FROM_SIZE;\
-	}\
-	END_DEF
-
-#define bytes_paste_move( FROM_REF, TO_REF )\
-	START_DEF\
-	{\
-		temp const n2 _PASTE_SIZE = bytes_measure( FROM_REF );\
-		bytes_copy_move( FROM_REF, _PASTE_SIZE, TO_REF );\
-	}\
-	END_DEF
-
-#define bytes_set_move( BYTE, TO_REF ) val_of( TO_REF++ ) = BYTE
-
-#define bytes_end( BYTES ) val_of( BYTES ) = '\0'
 
 ///////
 
@@ -1017,7 +1037,7 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ PATH_MAX_SIZE ],
 	temp n2 count = 0;
 	temp n2 len = bytes_measure( dir );
 	byte path[ PATH_MAX_SIZE ];
-	temp anon ref handle;
+	anon ref handle;
 	bytes_copy( dir, len, path );
 
 	#if OS_LINUX
@@ -1043,7 +1063,7 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ PATH_MAX_SIZE ],
 		}
 		closedir( handle );
 	#elif OS_WINDOWS
-		temp WIN32_FIND_DATA entry;
+		WIN32_FIND_DATA entry;
 		bytes_copy( "\\*", 3, path + len );
 		handle = FindFirstFile( path, ref_of( entry ) );
 		if( handle is INVALID_HANDLE_VALUE ) out 0;
@@ -1296,6 +1316,210 @@ embed byte ref get_exe_path()
 	#endif
 	out exe_path;
 }
+
+///////
+
+#define DECLARE_TYPE_2D( TYPE )\
+	fusion( TYPE##x2 )\
+	{\
+		variant\
+		{\
+			TYPE x;\
+			TYPE y;\
+		};\
+		variant\
+		{\
+			TYPE w;\
+			TYPE h;\
+		};\
+	}
+
+#define DECLARE_TYPE_3D( TYPE )\
+	fusion( TYPE##x3 )\
+	{\
+		variant\
+		{\
+			TYPE x;\
+			TYPE y;\
+			TYPE z;\
+		};\
+		variant\
+		{\
+			TYPE w;\
+			TYPE h;\
+			TYPE d;\
+		};\
+	}
+
+#define DECLARE_TYPE_4D( TYPE )\
+	fusion( TYPE##x4 )\
+	{\
+		variant\
+		{\
+			TYPE x;\
+			TYPE y;\
+			TYPE z;\
+			TYPE w;\
+		};\
+		variant\
+		{\
+			TYPE r;\
+			TYPE g;\
+			TYPE b;\
+			TYPE a;\
+		};\
+	}
+
+#define DECLARE_TYPE_2D_FN( TYPE )\
+	embed TYPE##x2 TYPE##x2_invert( const TYPE##x2 X )\
+	{\
+		out make( TYPE##x2, .x = -X.x, .y = -X.y );\
+	}\
+	embed TYPE##x2 TYPE##x2_add( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out make( TYPE##x2, .x = A.x + B.x, .y = A.y + B.y );\
+	}\
+	embed TYPE##x2 TYPE##x2_add_##TYPE( const TYPE##x2 A, const TYPE V )\
+	{\
+		out make( TYPE##x2, .x = A.x + V, .y = A.y + V );\
+	}\
+	embed TYPE##x2 TYPE##x2_sub( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out make( TYPE##x2, .x = A.x - B.x, .y = A.y - B.y );\
+	}\
+	embed TYPE##x2 TYPE##x2_sub_##TYPE( const TYPE##x2 A, const TYPE V )\
+	{\
+		out make( TYPE##x2, .x = A.x - V, .y = A.y - V );\
+	}\
+	embed TYPE##x2 TYPE##x2_mul( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out make( TYPE##x2, .x = A.x * B.x, .y = A.y * B.y );\
+	}\
+	embed TYPE##x2 TYPE##x2_mul_##TYPE( const TYPE##x2 A, const TYPE V )\
+	{\
+		out make( TYPE##x2, .x = A.x * V, .y = A.y * V );\
+	}\
+	embed TYPE##x2 TYPE##x2_div( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out make( TYPE##x2, .x = A.x / B.x, .y = A.y / B.y );\
+	}\
+	embed TYPE##x2 TYPE##x2_div_##TYPE( const TYPE##x2 A, const TYPE V )\
+	{\
+		out make( TYPE##x2, .x = A.x / V, .y = A.y / V );\
+	}
+
+#define DECLARE_TYPE_3D_FN( TYPE )\
+	embed TYPE##x3 TYPE##x3_invert( const TYPE##x3 X )\
+	{\
+		out make( TYPE##x3, .x = -X.x, .y = -X.y, .z = -X.z );\
+	}\
+	embed TYPE##x3 TYPE##x3_add( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out make( TYPE##x3, .x = A.x + B.x, .y = A.y + B.y, .z = A.z + B.z );\
+	}\
+	embed TYPE##x3 TYPE##x3_add_##TYPE( const TYPE##x3 A, const TYPE V )\
+	{\
+		out make( TYPE##x3, .x = A.x + V, .y = A.y + V, .z = A.z + V );\
+	}\
+	embed TYPE##x3 TYPE##x3_sub( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out make( TYPE##x3, .x = A.x - B.x, .y = A.y - B.y, .z = A.z - B.z );\
+	}\
+	embed TYPE##x3 TYPE##x3_sub_##TYPE( const TYPE##x3 A, const TYPE V )\
+	{\
+		out make( TYPE##x3, .x = A.x - V, .y = A.y - V, .z = A.z - V );\
+	}\
+	embed TYPE##x3 TYPE##x3_mul( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out make( TYPE##x3, .x = A.x * B.x, .y = A.y * B.y, .z = A.z * B.z );\
+	}\
+	embed TYPE##x3 TYPE##x3_mul_##TYPE( const TYPE##x3 A, const TYPE V )\
+	{\
+		out make( TYPE##x3, .x = A.x * V, .y = A.y * V, .z = A.z * V );\
+	}\
+	embed TYPE##x3 TYPE##x3_div( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out make( TYPE##x3, .x = A.x / B.x, .y = A.y / B.y, .z = A.z / B.z );\
+	}\
+	embed TYPE##x3 TYPE##x3_div_##TYPE( const TYPE##x3 A, const TYPE V )\
+	{\
+		out make( TYPE##x3, .x = A.x / V, .y = A.y / V, .z = A.z / V );\
+	}
+
+#define DECLARE_TYPE_4D_FN( TYPE )\
+	embed TYPE##x4 TYPE##x4_invert( const TYPE##x4 X )\
+	{\
+		out make( TYPE##x4, .x = -X.x, .y = -X.y, .z = -X.z, .w = -X.w );\
+	}\
+	embed TYPE##x4 TYPE##x4_add( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out make( TYPE##x4, .x = A.x + B.x, .y = A.y + B.y, .z = A.z + B.z, .w = A.w + B.w );\
+	}\
+	embed TYPE##x4 TYPE##x4_add_##TYPE( const TYPE##x4 A, const TYPE V )\
+	{\
+		out make( TYPE##x4, .x = A.x + V, .y = A.y + V, .z = A.z + V, .w = A.w + V );\
+	}\
+	embed TYPE##x4 TYPE##x4_sub( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out make( TYPE##x4, .x = A.x - B.x, .y = A.y - B.y, .z = A.z - B.z, .w = A.w - B.w );\
+	}\
+	embed TYPE##x4 TYPE##x4_sub_##TYPE( const TYPE##x4 A, const TYPE V )\
+	{\
+		out make( TYPE##x4, .x = A.x - V, .y = A.y - V, .z = A.z - V, .w = A.w - V );\
+	}\
+	embed TYPE##x4 TYPE##x4_mul( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out make( TYPE##x4, .x = A.x * B.x, .y = A.y * B.y, .z = A.z * B.z, .w = A.w * B.w );\
+	}\
+	embed TYPE##x4 TYPE##x4_mul_##TYPE( const TYPE##x4 A, const TYPE V )\
+	{\
+		out make( TYPE##x4, .x = A.x * V, .y = A.y * V, .z = A.z * V, .w = A.w * V );\
+	}\
+	embed TYPE##x4 TYPE##x4_div( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out make( TYPE##x4, .x = A.x / B.x, .y = A.y / B.y, .z = A.z / B.z, .w = A.w / B.w );\
+	}\
+	embed TYPE##x4 TYPE##x4_div_##TYPE( const TYPE##x4 A, const TYPE V )\
+	{\
+		out make( TYPE##x4, .x = A.x / V, .y = A.y / V, .z = A.z / V, .w = A.w / V );\
+	}\
+	embed TYPE TYPE##x4_dot( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out A.x * B.x + A.y * B.y + A.z * B.z + A.w * B.w;\
+	}\
+	embed TYPE TYPE##x4_mag_sqr( const TYPE##x4 A )\
+	{\
+		out TYPE##x4_dot( A, A );\
+	}\
+	embed TYPE TYPE##x4_distance_sqr( const TYPE##x4 A, const TYPE##x4 B )\
+	{\
+		out TYPE##x4_mag_sqr( TYPE##x4_sub( B, A ) );\
+	}
+
+//
+
+#define DECLARE_TYPE_MULTI( TYPE )\
+	DECLARE_TYPE_2D( TYPE );\
+	DECLARE_TYPE_3D( TYPE );\
+	DECLARE_TYPE_4D( TYPE );\
+	DECLARE_TYPE_2D_FN( TYPE );\
+	DECLARE_TYPE_3D_FN( TYPE );\
+	DECLARE_TYPE_4D_FN( TYPE )
+
+//
+
+DECLARE_TYPE_MULTI( n1 );
+DECLARE_TYPE_MULTI( i1 );
+DECLARE_TYPE_MULTI( n2 );
+DECLARE_TYPE_MULTI( i2 );
+DECLARE_TYPE_MULTI( n4 );
+DECLARE_TYPE_MULTI( i4 );
+DECLARE_TYPE_MULTI( r4 );
+DECLARE_TYPE_MULTI( n8 );
+DECLARE_TYPE_MULTI( i8 );
+DECLARE_TYPE_MULTI( r8 );
+
+#define AREA( x2 ) ( x2.w * x2.h )
 
 ///////
 
