@@ -376,7 +376,7 @@ type_from( double ) r8;
 
 #define bytes_end( BYTES ) val_of( BYTES ) = '\0'
 
-embed anon ref _ref_resize( const anon ref r, size_t type_size, size_t old_count, size_t new_count )
+embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size_t new_count )
 {
 	temp anon ref new_ptr = realloc( r, type_size * new_count );
 	if( new_ptr isnt nothing and new_count > old_count )
