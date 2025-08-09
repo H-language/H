@@ -24,10 +24,11 @@
 	#include <fcntl.h>
 	#include <unistd.h>
 	#define SEPARATOR "/"
-#ifdef C7H16
-	#include <X11/Xlib.h>
-	#include <X11/Xutil.h>
-#endif
+	#ifdef C7H16
+		#include <X11/Xlib.h>
+		#include <X11/Xutil.h>
+		#include <X11/extensions/Xrender.h>
+	#endif
 	//
 #elif defined( _WIN32 )
 	#undef OS_WINDOWS
@@ -293,35 +294,35 @@ type_from( char ) byte;
 // 1 byte
 type_from( unsigned char ) n1;
 #define n1( VAL ) to( n1, VAL )
-#define n1_min n1( 0x00u )
-#define n1_max n1( 0xFFu )
+#define min_n1 n1( 0x00u )
+#define max_n1 n1( 0xFFu )
 //
 type_from( signed char ) i1;
 #define i1( VAL ) to( i1, VAL )
-#define i1_min i1( 0x80 )
-#define i1_max i1( 0x7F )
+#define min_i1 i1( 0x80 )
+#define max_i1 i1( 0x7F )
 //
 // 2 bytes
 type_from( unsigned short ) n2;
 #define n2( VAL ) to( n2, VAL )
-#define n2_min n2( 0x0000u )
-#define n2_max n2( 0xFFFFu )
+#define min_n2 n2( 0x0000u )
+#define max_n2 n2( 0xFFFFu )
 //
 type_from( signed short ) i2;
 #define i2( VAL ) to( i2, VAL )
-#define i2_min i2( 0x8000 )
-#define i2_max i2( 0x7FFF )
+#define min_i2 i2( 0x8000 )
+#define max_i2 i2( 0x7FFF )
 //
 // 4 bytes
 type_from( unsigned int ) n4;
 #define n4( VAL ) to( n4, VAL )
-#define n4_min n4( 0x00000000u )
-#define n4_max n4( 0xFFFFFFFFu )
+#define min_n4 n4( 0x00000000u )
+#define max_n4 n4( 0xFFFFFFFFu )
 //
 type_from( signed int ) i4;
 #define i4( VAL ) to( i4, VAL )
-#define i4_min i4( 0x80000000 )
-#define i4_max i4( 0x7FFFFFFF )
+#define min_i4 i4( 0x80000000 )
+#define max_i4 i4( 0x7FFFFFFF )
 //
 type_from( float ) r4;
 #define r4( VAL ) to( r4, VAL )
@@ -329,13 +330,13 @@ type_from( float ) r4;
 // 8 bytes
 type_from( unsigned long long ) n8;
 #define n8( VAL ) to( n8, VAL )
-#define n8_min n8( 0x0000000000000000u )
-#define n8_max n8( 0xFFFFFFFFFFFFFFFFu )
+#define min_n8 n8( 0x0000000000000000u )
+#define max_n8 n8( 0xFFFFFFFFFFFFFFFFu )
 //
 type_from( signed long long ) i8;
 #define i8( VAL ) to( i8, VAL )
-#define i8_min i8( 0x8000000000000000 )
-#define i8_max i8( 0x7FFFFFFFFFFFFFFF )
+#define min_i8 i8( 0x8000000000000000 )
+#define max_i8 i8( 0x7FFFFFFFFFFFFFFF )
 //
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
@@ -433,25 +434,226 @@ embed anon ref _ref_resize( const anon ref r, size_t type_size, size_t old_count
 
 #define MIN( A, B ) pick( ( A ) < ( B ), A, B )
 #define MIN3( A, B, C ) MIN( A, MIN( B, C ) )
-#define MIN4( A, B, C, D ) MIN( A, MIN3( B, C, D ) )
+#define MIN4( A, B, C, D ) MIN3( A, B, MIN( C, D ) )
+#define MIN5( A, B, C, D, E ) MIN4( A, B, C, MIN( D, E ) )
+
 #define MAX( A, B ) pick( ( A ) > ( B ), A, B )
 #define MAX3( A, B, C ) MAX( A, MAX( B, C ) )
-#define MAX4( A, B, C, D ) MAX( A, MAX3( B, C, D ) )
+#define MAX4( A, B, C, D ) MAX3( A, B, MAX( C, D ) )
+#define MAX5( A, B, C, D, E ) MAX4( A, B, C, MAX( D, E ) )
 
-#define MEAN( A, B ) ( ( ( A ) + ( B ) ) / 2 )
-#define MEAN_BITWISE( A, B ) ( ( ( A ) + ( B ) ) >> 1 )
-#define MEAN3( A, B, C ) ( ( ( A ) + ( B ) + ( C ) ) / 3 )
-#define MEAN4( A, B, C, D ) ( ( ( A ) + ( B ) + ( C ) + ( D ) ) / 4 )
-#define MEAN4_BITWISE( A, B, C, D ) ( ( ( A ) + ( B ) + ( C ) + ( D ) ) >> 2 )
+#define MEDIAN( A, B, C ) pick( ( A ) > ( B ), pick( ( B ) > ( C ), B, MIN( A, C ) ), pick( ( A ) > ( C ), A, MIN( B, C ) ) )
+#define MEDIAN4( A, B, C, D ) ( ( ( MIN( MAX( A, B ), MAX( C, D ) ) + MAX( MIN( A, B ), MIN( C, D ) ) ) ) / 2 )
+#define MEDIAN4_BITWISE( A, B, C, D ) ( ( ( MIN( MAX( A, B ), MAX( C, D ) ) + MAX( MIN( A, B ), MIN( C, D ) ) ) ) >> 1 )
+#define MEDIAN5( A, B, C, D, E ) ( ( A + B + C + D + E - MIN5( A, B, C, D, E ) - MAX5( A, B, C, D, E ) ) / 3 )
+
+#define AVG( A, B ) ( ( ( A ) + ( B ) ) / 2 )
+#define AVG_BITWISE( A, B ) ( ( ( A ) + ( B ) ) >> 1 )
+#define AVG3( A, B, C ) ( ( ( A ) + ( B ) + ( C ) ) / 3 )
+#define AVG4( A, B, C, D ) ( ( ( A ) + ( B ) + ( C ) + ( D ) ) / 4 )
+#define AVG4_BITWISE( A, B, C, D ) ( ( ( A ) + ( B ) + ( C ) + ( D ) ) >> 2 )
 
 #define CLAMP( V, MINIMUM, MAXIMUM ) MIN( MAX( ( V ), ( MINIMUM ) ), ( MAXIMUM ) )
+#define SATURATE( V ) CLAMP( V, 0, 1 )
 #define SQR( V ) ( ( V ) * ( V ) )
 #define CUBE( V ) ( ( V ) * ( V ) * ( V ) )
 #define ABS( V ) pick( ( V ) < 0, -( V ), V )
 #define SIGN( V ) pick( ( V ) >= 0, 1, -1 )
 #define SIGN_ZERO( V ) pick( ( V ) > 0, 1, pick( ( V ) < 0, -1, 0 ) )
-#define SNAP( V, MULTIPLES_OF ) ( ( ( V ) / ( MULTIPLES_OF ) ) * MULTIPLES_OF )
-#define SNAP_BITS( V, BIT ) ( ( ( V ) >> ( BIT ) ) << ( BIT ) )
+#define SNAP( V, MULTIPLES_OF ) ( ( V ) / ( MULTIPLES_OF ) ) * ( MULTIPLES_OF )
+#define SNAP_r( N, V, MULTIPLES_OF ) r##N##_trunc( ( V ) / ( MULTIPLES_OF ) ) * ( MULTIPLES_OF )
+#define SNAP_BIT( V, BIT ) ( ( ( V ) >> ( BIT ) ) << ( BIT ) )
+
+#define MIX( A, B, AMOUNT ) ( ( A ) + ( AMOUNT ) * ( ( B ) - ( A ) ) )
+#define MAP( V, A, B, C, D ) ( ( V ) - ( A ) ) * ( ( D ) - ( C ) ) / ( ( B ) - ( A ) ) + ( C )
+#define RANGE( V, LOWER, UPPER ) ( ( V - ( LOWER ) ) / ( ( UPPER ) - ( LOWER ) ) )
+
+#define TRUNC_r( N, ... ) r##N( i##N( __VA_ARGS__ ) )
+#define FLOOR_r( N, ... ) pick( __VA_ARGS__ >= 0, TRUNC_r( N, __VA_ARGS__ ), r##N( i##N( __VA_ARGS__ ) - 1 ) )
+#define ROUND_r( N, ... ) TRUNC_r( N, __VA_ARGS__ + pick( __VA_ARGS__ >= 0, 0.5, -0.5 ) )
+#define CEIL_r( N, ... ) pick( __VA_ARGS__ > 0, r##N( i##N( __VA_ARGS__ ) + 1 ), TRUNC_r( N, __VA_ARGS__ ) )
+#define MOD_r( N, V, MODULO ) ( ( V ) - ( MODULO ) * r##N##_floor( ( V ) / ( MODULO ) ) )
+
+#define SMOOTH( V ) pick( ( V ) <= 0., 0, pick( ( V ) >= 1., 1, ( V ) * ( V ) * ( 3 - 2 * ( V ) ) ) )
+
+// // // // // // //
+
+#define FUNCTION_GROUP_BASE( T, N )\
+	embed T##N T##N##_min( const T##N a, const T##N b )\
+	{\
+		out MIN( a, b );\
+	}\
+	embed T##N T##N##_min3( const T##N a, const T##N b, const T##N c )\
+	{\
+		out MIN3( a, b, c );\
+	}\
+	embed T##N T##N##_min4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	{\
+		out MIN4( a, b, c, d );\
+	}\
+	embed T##N T##N##_min5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	{\
+		out MIN5( a, b, c, d, e );\
+	}\
+	embed T##N T##N##_max( const T##N a, const T##N b )\
+	{\
+		out MAX( a, b );\
+	}\
+	embed T##N T##N##_max3( const T##N a, const T##N b, const T##N c )\
+	{\
+		out MAX3( a, b, c );\
+	}\
+	embed T##N T##N##_max4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	{\
+		out MAX4( a, b, c, d );\
+	}\
+	embed T##N T##N##_max5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	{\
+		out MAX5( a, b, c, d, e );\
+	}\
+	embed T##N T##N##_median( const T##N a, const T##N b, const T##N c )\
+	{\
+		out MEDIAN( a, b, c );\
+	}\
+	embed T##N T##N##_median5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	{\
+		out MEDIAN5( a, b, c, d, e );\
+	}\
+	embed T##N T##N##_avg3( const T##N a, const T##N b, const T##N c )\
+	{\
+		out AVG3( a, b, c );\
+	}\
+	embed T##N T##N##_clamp( const T##N v, const T##N min, const T##N max )\
+	{\
+		out CLAMP( v, min, max );\
+	}\
+	embed T##N T##N##_saturate( const T##N v )\
+	{\
+		out SATURATE( v );\
+	}\
+	embed T##N T##N##_sqr( const T##N v )\
+	{\
+		out SQR( v );\
+	}\
+	embed T##N T##N##_cube( const T##N v )\
+	{\
+		out CUBE( v );\
+	}
+
+#define FUNCTION_GROUP_BASE_NI( T, N )\
+	embed T##N T##N##_median4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	{\
+		out MEDIAN4_BITWISE( a, b, c, d );\
+	}\
+	embed T##N T##N##_avg( const T##N a, const T##N b )\
+	{\
+		out AVG_BITWISE( a, b );\
+	}\
+	embed T##N T##N##_avg4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	{\
+		out AVG4_BITWISE( a, b, c, d );\
+	}\
+	embed T##N T##N##_snap( const T##N v, const T##N multiples_of )\
+	{\
+		out SNAP( v, multiples_of );\
+	}\
+	embed T##N T##N##_snap_bit( const T##N v, const T##N b )\
+	{\
+		out SNAP_BIT( v, b );\
+	}
+
+#define FUNCTION_GROUP_BASE_IR( T, N )\
+	embed T##N T##N##_abs( const T##N v )\
+	{\
+		out ABS( v );\
+	}\
+	embed T##N T##N##_sign( const T##N v )\
+	{\
+		out SIGN( v );\
+	}\
+	embed T##N T##N##_sign_zero( const T##N v )\
+	{\
+		out SIGN_ZERO( v );\
+	}
+
+#define FUNCTION_GROUP_N( N )\
+	FUNCTION_GROUP_BASE( n, N );\
+	FUNCTION_GROUP_BASE_NI( n, N )
+
+#define FUNCTION_GROUP_I( N )\
+	FUNCTION_GROUP_BASE( i, N );\
+	FUNCTION_GROUP_BASE_NI( i, N );\
+	FUNCTION_GROUP_BASE_IR( i, N )
+
+#define FUNCTION_GROUP_R( N )\
+	FUNCTION_GROUP_BASE( r, N );\
+	FUNCTION_GROUP_BASE_IR( r, N );\
+	embed r##N r##N##_trunc( const r##N v )\
+	{\
+		out TRUNC_r( N, v );\
+	}\
+	embed r##N r##N##_floor( const r##N v )\
+	{\
+		out FLOOR_r( N, v );\
+	}\
+	embed r##N r##N##_round( const r##N v )\
+	{\
+		out ROUND_r( N, v );\
+	}\
+	embed r##N r##N##_ceil( const r##N v )\
+	{\
+		out CEIL_r( N, v );\
+	}\
+	embed r##N r##N##_mod( const r##N v, const r##N m )\
+	{\
+		out MOD_r( N, v, m );\
+	}\
+	embed r##N r##N##_median4( const r##N a, const r##N b, const r##N c, const r##N d )\
+	{\
+		out MEDIAN4( a, b, c, d );\
+	}\
+	embed r##N r##N##_avg( const r##N a, const r##N b )\
+	{\
+		out AVG( a, b );\
+	}\
+	embed r##N r##N##_avg4( const r##N a, const r##N b, const r##N c, const r##N d )\
+	{\
+		out AVG4( a, b, c, d );\
+	}\
+	embed r##N r##N##_snap( const r##N v, const r##N multiples_of )\
+	{\
+		out SNAP_r( N, v, multiples_of );\
+	}\
+	embed r##N r##N##_mix( const r##N a, const r##N b, const r##N amount )\
+	{\
+		out MIX( a, b, amount );\
+	}\
+	embed r##N r##N##_map( const r##N v, const r##N from_lower, const r##N from_upper, const r##N to_lower, const r##N to_upper )\
+	{\
+		out MAP( v, from_lower, from_upper, to_lower, to_upper );\
+	}\
+	embed r##N r##N##_range( const r##N v, const r##N lower, const r##N upper )\
+	{\
+		out RANGE( v, lower, upper );\
+	}\
+	embed r##N r##N##_smooth( const r##N v )\
+	{\
+		out SMOOTH( v );\
+	}
+
+FUNCTION_GROUP_N( 1 );
+FUNCTION_GROUP_I( 1 );
+
+FUNCTION_GROUP_N( 2 );
+FUNCTION_GROUP_I( 2 );
+
+FUNCTION_GROUP_N( 4 );
+FUNCTION_GROUP_I( 4 );
+FUNCTION_GROUP_R( 4 );
+
+FUNCTION_GROUP_N( 8 );
+FUNCTION_GROUP_I( 8 );
+FUNCTION_GROUP_R( 8 );
 
 ///////
 
