@@ -1287,7 +1287,7 @@ fn file_close( file ref f )
 
 fn file_unmap( file ref f )
 {
-	if_something( f->handle )
+	if_something( f->mapped_bytes )
 	{
 		#if OS_LINUX
 			munmap( f->mapped_bytes, f->size );
