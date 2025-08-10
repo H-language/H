@@ -157,12 +157,6 @@
 
 ///////
 
-#define success 0
-#define failure 1
-#define warning 2
-
-///////
-
 #define ref *
 #define const_ref ref const
 #define temp register
@@ -273,14 +267,37 @@ type_from( _Bool ) flag;
 #define while_none( ARGS... ) while( none( ARGS ) )
 #define while_not_all( ARGS... ) while( not_all( ARGS ) )
 //
-#define skip_if( ARG... )\
-	if( ARG ) skip
-#define jump_if( ARG... )\
-	if( ARG ) jump
-#define next_if( ARG... )\
-	if( ARG ) next
-#define out_if( ARG... )\
-	if( ARG ) out
+#define skip_if( ARG... ) if( ARG ) skip
+#define skip_if_nothing( ARG... ) if_nothing( ARG ) skip
+#define skip_if_something( ARG... ) if_something( ARG ) skip
+#define skip_if_any( ARGS... ) if_any( ARGS ) skip
+#define skip_if_all( ARGS... ) if_all( ARGS ) skip
+#define skip_if_none( ARGS... ) if_none( ARGS ) skip
+#define skip_if_not_all( ARGS... ) if_not_all( ARGS ) skip
+//
+#define jump_if( ARG... ) if( ARG ) jump
+#define jump_if_nothing( ARG... ) if_nothing( ARG ) jump
+#define jump_if_something( ARG... ) if_something( ARG ) jump
+#define jump_if_any( ARGS... ) if_any( ARGS ) jump
+#define jump_if_all( ARGS... ) if_all( ARGS ) jump
+#define jump_if_none( ARGS... ) if_none( ARGS ) jump
+#define jump_if_not_all( ARGS... ) if_not_all( ARGS ) jump
+//
+#define next_if( ARG... ) if( ARG ) next
+#define next_if_nothing( ARG... ) if_nothing( ARG ) next
+#define next_if_something( ARG... ) if_something( ARG ) next
+#define next_if_any( ARGS... ) if_any( ARGS ) next
+#define next_if_all( ARGS... ) if_all( ARGS ) next
+#define next_if_none( ARGS... ) if_none( ARGS ) next
+#define next_if_not_all( ARGS... ) if_not_all( ARGS ) next
+//
+#define out_if( ARG... ) if( ARG ) out
+#define out_if_nothing( ARG... ) if_nothing( ARG ) out
+#define out_if_something( ARG... ) if_something( ARG ) out
+#define out_if_any( ARGS... ) if_any( ARGS ) out
+#define out_if_all( ARGS... ) if_all( ARGS ) out
+#define out_if_none( ARGS... ) if_none( ARGS ) out
+#define out_if_not_all( ARGS... ) if_not_all( ARGS ) out
 
 ///////
 
@@ -340,6 +357,13 @@ type_from( signed long long ) i8;
 //
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
+
+///////
+
+type_from( i4 ) out_state;
+#define success 0
+#define failure 1
+#define warning 2
 
 ///////
 
@@ -1725,6 +1749,7 @@ DECLARE_TYPE_MULTI( r8 );
 
 ///////
 
-#define start i4 main( i4 input_count, byte ref ref input_bytes )
+#define _main_fn out_state main( const i4 input_count, const byte const_ref const_ref input_bytes )
+#define start _main_fn
 
 /////// /////// /////// /////// /////// /////// ////////
