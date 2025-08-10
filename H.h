@@ -419,17 +419,21 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 
 #define variant struct
 
-#define _type_make( NAME, REF... )\
+#define _type_make( NAME, REF, EXTRA... )\
 	type_from( struct NAME REF ) NAME;\
+	EXTRA;\
 	struct PACKED NAME
-#define type( NAME ) _type_make( NAME )
-
-#define object( NAME ) _type_make( NAME, ref )
-#define object_fn( OBJECT, FN, ARGS... )\
-	fn OBJECT##_##FN( OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
-#define new_object( OBJECT ) new_ref( type_of_ref( OBJECT ) )
+#define type( NAME ) _type_make( NAME, )
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
+
+#define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn; )
+#define object_fn( OBJECT, FN, ARGS... )\
+	fn OBJECT##_##FN( const OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
+
+#define call( OBJECT, FN ) if_something( OBJECT->FN ) OBJECT->FN( OBJECT )
+
+#define new_object( OBJECT ) new_ref( type_of_ref( OBJECT ) )
 
 //
 
