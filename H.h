@@ -1557,7 +1557,7 @@ embed byte ref get_exe_path()
 {
 	perm byte exe_path[ PATH_MAX_SIZE ] = "";
 	#if OS_LINUX
-		readlink( "/proc/self/exe", exe_path, PATH_MAX_SIZE );
+		temp i8 _s = readlink( "/proc/self/exe", exe_path, PATH_MAX_SIZE );
 	#elif OS_WINDOWS
 		GetModuleFileNameA( nothing, exe_path, PATH_MAX_SIZE );
 	#endif
