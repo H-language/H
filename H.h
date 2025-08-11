@@ -57,6 +57,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 ///////
 
@@ -678,10 +679,26 @@ FUNCTION_GROUP_I( 2 );
 FUNCTION_GROUP_N( 4 );
 FUNCTION_GROUP_I( 4 );
 FUNCTION_GROUP_R( 4 );
+#define r4_sqrt sqrtf
+#define r4_sin sinf
+#define r4_cos cosf
+#define r4_tan tanf
+#define r4_asin asinf
+#define r4_acos acosf
+#define r4_atan atanf
+#define r4_atanyx atan2f
 
 FUNCTION_GROUP_N( 8 );
 FUNCTION_GROUP_I( 8 );
 FUNCTION_GROUP_R( 8 );
+#define r8_sqrt sqrt
+#define r8_sin sin
+#define r8_cos cos
+#define r8_tan tan
+#define r8_asin asin
+#define r8_acos acos
+#define r8_atan atan
+#define r8_atanyx atan2
 
 ///////
 
@@ -1310,7 +1327,7 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ PATH_MAX_SIZE ],
 		while( count < max_entries and FindNextFile( handle, ref_of( entry ) ) );
 		FindClose( handle );
 	#endif
-	return count;
+	out count;
 }
 
 #define get_files( DIR, OUT_ENTRIES, MAX_ENTRIES ) get_entries_in_folder( DIR, OUT_ENTRIES, MAX_ENTRIES, entry_files )
@@ -1636,6 +1653,18 @@ embed byte ref get_exe_path()
 	embed TYPE##x2 TYPE##x2_div_##TYPE( const TYPE##x2 A, const TYPE V )\
 	{\
 		out make( TYPE##x2, .x = A.x / V, .y = A.y / V );\
+	}\
+	embed TYPE TYPE##x2_dot( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out A.x * B.x + A.y * B.y;\
+	}\
+	embed TYPE TYPE##x2_mag_sqr( const TYPE##x2 A )\
+	{\
+		out TYPE##x2_dot( A, A );\
+	}\
+	embed TYPE TYPE##x2_distance_sqr( const TYPE##x2 A, const TYPE##x2 B )\
+	{\
+		out TYPE##x2_mag_sqr( TYPE##x2_sub( B, A ) );\
 	}
 
 #define DECLARE_TYPE_3D_FN( TYPE )\
@@ -1674,6 +1703,22 @@ embed byte ref get_exe_path()
 	embed TYPE##x3 TYPE##x3_div_##TYPE( const TYPE##x3 A, const TYPE V )\
 	{\
 		out make( TYPE##x3, .x = A.x / V, .y = A.y / V, .z = A.z / V );\
+	}\
+	embed TYPE TYPE##x3_dot( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out A.x * B.x + A.y * B.y + A.z * B.z;\
+	}\
+	embed TYPE TYPE##x3_mag_sqr( const TYPE##x3 A )\
+	{\
+		out TYPE##x3_dot( A, A );\
+	}\
+	embed TYPE TYPE##x3_distance_sqr( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out TYPE##x3_mag_sqr( TYPE##x3_sub( B, A ) );\
+	}\
+	embed TYPE##x3 TYPE##x3_cross( const TYPE##x3 A, const TYPE##x3 B )\
+	{\
+		out make( TYPE##x3, .x = A.y * B.z - A.z * B.y, .y = A.z * B.x - A.x * B.z, .z = A.x * B.y - A.y * B.x );\
 	}
 
 #define DECLARE_TYPE_4D_FN( TYPE )\
@@ -1726,6 +1771,20 @@ embed byte ref get_exe_path()
 		out TYPE##x4_mag_sqr( TYPE##x4_sub( B, A ) );\
 	}
 
+#define DECLARE_TYPE_XD_FN_R( N, X )\
+	embed r##N r##N##x##X##_mag( const r##N##x##X A )\
+	{\
+		out r##N##_sqrt( r##N##x##X##_mag_sqr( A ) );\
+	}\
+	embed r##N r##N##x##X##_distance( const r##N##x##X A, const r##N##x##X B )\
+	{\
+		out r##N##_sqrt( r##N##x##X##_distance_sqr( A, B ) );\
+	}\
+	embed r##N##x##X r##N##x##X##_norm( const r##N##x##X A )\
+	{\
+		out r##N##x##X##_mul_##r##N( A, 1.0 / r##N##x##X##_mag( A ) );\
+	}
+
 //
 
 #define DECLARE_TYPE_MULTI( TYPE )\
@@ -1736,6 +1795,11 @@ embed byte ref get_exe_path()
 	DECLARE_TYPE_3D_FN( TYPE );\
 	DECLARE_TYPE_4D_FN( TYPE )
 
+#define DECLARE_TYPE_MULTI_R( N )\
+	DECLARE_TYPE_XD_FN_R( N, 2 );\
+	DECLARE_TYPE_XD_FN_R( N, 3 );\
+	DECLARE_TYPE_XD_FN_R( N, 4 )
+
 //
 
 DECLARE_TYPE_MULTI( n1 );
@@ -1745,11 +1809,324 @@ DECLARE_TYPE_MULTI( i2 );
 DECLARE_TYPE_MULTI( n4 );
 DECLARE_TYPE_MULTI( i4 );
 DECLARE_TYPE_MULTI( r4 );
+DECLARE_TYPE_MULTI_R( 4 );
 DECLARE_TYPE_MULTI( n8 );
 DECLARE_TYPE_MULTI( i8 );
 DECLARE_TYPE_MULTI( r8 );
+DECLARE_TYPE_MULTI_R( 8 );
 
 #define AREA( x2 ) ( x2.w * x2.h )
+
+//
+
+#define point_in_size( X, Y, W, H ) all( X >= 0, Y >= 0, X < W, Y < H )
+#define point_not_in_size( X, Y, W, H ) any( X < 0, Y < 0, X >= W, Y >= H )
+
+#define point_in_box( X, Y, TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y ) all( X >= TOPLEFT_X, Y >= TOPLEFT_Y, X <= BOTTOMRIGHT_X, Y <= BOTTOMRIGHT_Y )
+#define point_not_in_box( X, Y, TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y ) any( X < TOPLEFT_X, Y < TOPLEFT_Y, X > BOTTOMRIGHT_X, Y > BOTTOMRIGHT_Y )
+
+#define box_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H )\
+	all( point_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
+
+#define box_not_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H )\
+	any( point_not_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_not_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
+
+#define box_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y )\
+	all( point_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
+
+#define box_not_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y )\
+	any( point_not_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_not_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
+
+///////
+
+type_from( r4x3 ) vector;
+#define _vector( X, Y, Z ) make( r4x3, .x = X, .y = Y, .z = Z )
+#define _eval_vector( X_Y_Z... ) _vector( X_Y_Z )
+#define vector( X_Y_Z... ) _eval_vector( DEFAULTS( ( 0.0, 0.0, 0.0 ), X_Y_Z ) )
+
+#define vector_invert r4x3_invert
+#define vector_add r4x3_add
+#define vector_add_r4 r4x3_add_r4
+#define vector_sub r4x3_sub
+#define vector_sub_r4 r4x3_sub_r4
+#define vector_mul r4x3_mul
+#define vector_mul_r4 r4x3_mul_r4
+#define vector_div r4x3_div
+#define vector_div_r4 r4x3_div_r4
+#define vector_dot r4x3_dot
+#define vector_cross r4x3_cross
+#define vector_norm r4x3_norm
+
+type_from( r4 ) hangle;
+
+type( rotor )
+{
+	vector v;
+	hangle h;
+};
+
+#define rotor( V, H ) make( rotor, .v = V, .h = H )
+#define rotor_default() rotor( vector( 0.0 ), 1.0 )
+
+embed rotor new_rotor( const vector norm_v, const hangle h )
+{
+	out rotor( vector_mul_r4( norm_v, r4_sin( h ) ), r4_cos( h ) );
+}
+
+//
+
+embed rotor yaw_rotor( const hangle h ) // Z AXIS
+{
+	out rotor( vector( 0., 0., sin( h ) ), cos( h ) );
+}
+
+embed rotor pitch_rotor( const hangle h ) // Y AXIS
+{
+	out rotor( vector( 0., sin( h ), 0. ), cos( h ) );
+}
+
+embed rotor roll_rotor( const hangle h ) // X AXIS
+{
+	out rotor( vector( sin( h ), 0., 0. ), cos( h ) );
+}
+
+//
+
+embed rotor invert_rotor( const rotor r )
+{
+	out rotor( vector_invert( r.v ), r.h );
+}
+
+//
+
+embed rotor rotor_add( const rotor a, const rotor b )
+{
+	out rotor( vector_add( a.v, b.v ), a.h + b.h );
+}
+
+embed rotor rotor_sub( const rotor a, const rotor b )
+{
+	out rotor( vector_sub( a.v, b.v ), a.h - b.h );
+}
+
+embed rotor rotor_mul_r4( const rotor r, const r4 f )
+{
+	out rotor( vector_mul_r4( r.v, f ), r.h * f );
+}
+
+#define rotor_halve( R ) rotor_mul_r4( R, 0.5 )
+
+embed rotor rotor_mul( const rotor a, const rotor b )
+{
+	temp const r4 i = ( a.v.z + a.v.x ) * ( b.v.x + b.v.y );
+	temp const r4 j = ( a.h + a.v.y ) * ( b.h - b.v.z );
+	temp const r4 k = ( a.h - a.v.y ) * ( b.h + b.v.z );
+	temp const r4 l = i + j + k;
+	temp const r4 m = 0.5 * ( ( a.v.z - a.v.x ) * ( b.v.x - b.v.y ) + l );
+	out rotor( vector( ( a.h + a.v.x ) * ( b.h + b.v.x ) + m - l, ( a.h - a.v.x ) * ( b.v.y + b.v.z ) + m - k, ( a.v.y + a.v.z ) * ( b.h - b.v.x ) + m - j ), ( a.v.z - a.v.y ) * ( b.v.y - b.v.z ) + m - i );
+
+	//out rotor( vector_add( vector_add( vector_mul_r4( b.v, a.h ), vector_mul_r4( a.v, b.h ) ), vector_cross( a.v, b.v ) ), ( a.h * b.h ) - vector_dot( a.v, b.v ) );
+}
+
+//
+
+embed rotor construct_rotor( const hangle yaw, const hangle pitch, const hangle roll )
+{
+	temp const r4 sy = r4_sin( yaw );
+	temp const r4 cy = r4_cos( yaw );
+	temp const r4 sp = r4_sin( pitch );
+	temp const r4 cp = r4_cos( pitch );
+	temp const r4 sr = r4_sin( roll );
+	temp const r4 cr = r4_cos( roll );
+	out rotor( vector( sr * cp * cy - cr * sp * sy, cr * sp * cy + sr * cp * sy, cr * cp * sy - sr * sp * cy ), cr * cp * cy + sr * sp * sy );
+
+	//out rotor_mul( rotor_mul( yaw_rotor( yaw ), pitch_rotor( pitch ) ), roll_rotor( roll ) );
+}
+
+//
+
+embed rotor look_rotor( const vector from_v, const vector to_v, const hangle roll )
+{
+	temp const vector dir = vector_norm( vector_sub( to_v, from_v ) );
+	out construct_rotor( r4_atanyx( dir.y, dir.x ) * 0.5, r4_asin( -dir.z ) * 0.5, roll );
+}
+
+//
+
+embed vector vector_rotate( const vector v, const rotor r )
+{
+	temp const r4 a = r.v.y * v.z - r.v.z * v.y;
+	temp const r4 b = r.v.z * v.x - r.v.x * v.z;
+	temp const r4 c = r.v.x * v.y - r.v.y * v.x;
+	out vector( v.x + 2.0 * ( r.h * a + r.v.y * c - r.v.z * b ), v.y + 2.0 * ( r.h * b + r.v.z * a - r.v.x * c ), v.z + 2.0 * ( r.h * c + r.v.x * b - r.v.y * a ) );
+
+	//temp const vector c = vector_mul_r4( vector_cross( r.v, v ), 2.0 );
+	//out vector_sub( vector_add( v, vector_mul_r4( c, r.h ) ), vector_cross( c, r.v ) );
+}
+
+///////
+
+type( motor )
+{
+	rotor r;
+	rotor t;
+};
+
+#define motor( R, T ) make( motor, .r = R, .t = T )
+
+embed motor new_motor( const rotor r, const vector pos )
+{
+	out motor( r, rotor_halve( rotor_mul( rotor( vector( pos.x, pos.y, pos.z ), 0. ), r ) ) );
+}
+
+embed motor invert_motor( const motor m )
+{
+	out motor( invert_rotor( m.r ), invert_rotor( m.t ) );
+}
+
+embed motor motor_mul( const motor a, const motor b )
+{
+	out motor( rotor_mul( a.r, b.r ), rotor_add( rotor_mul( a.r, b.t ), rotor_mul( a.t, b.r ) ) );
+}
+
+embed vector vector_transform( const vector v, const motor m )
+{
+	out motor_mul( motor_mul( m, motor( rotor_default(), rotor( v, 0.0 ) ) ), motor( rotor( vector_invert( m.r.v ), m.r.h ), rotor( m.t.v, -m.t.h ) ) ) .t.v;
+}
+
+///////
+
+type( projection )
+{
+	r4 view_scale;
+};
+
+#define projection( VIEW_SCALE ) make( projection, .view_scale = VIEW_SCALE )
+
+projection new_projection( const float fov_degrees )
+{
+	out projection( 1.0 / r4_tan( fov_degrees * 0.5 ) );
+}
+
+embed vector world_to_view( const vector v )
+{
+	out vector( -v.y, -v.z, v.x );
+}
+
+embed vector view_to_world( vector v )
+{
+	//v.y = -v.y;
+	out vector( v.z, -v.x, -v.y );
+}
+
+embed vector vector_project( const vector world_v, const projection p )
+{
+	vector pos = world_to_view( world_v );
+	//pos.y = -pos.y;
+	float z = pos.z;
+
+	out vector( pos.x / z * p.view_scale, pos.y / z * p.view_scale, 1.0 / z );
+}
+
+///////
+
+type_from( motor ) observer;
+
+embed observer new_observer( const vector from_v, const vector to_v, const hangle roll )
+{
+	out invert_motor( new_motor( look_rotor( from_v, to_v, roll ), from_v ) );
+}
+
+embed vector vector_observe( const vector world_v, const observer o, const projection p )
+{
+	out vector_project( vector_transform( world_v, o ), p );
+}
+
+///////
+
+#define nano_per_micro 1000
+#define nano_per_milli 1000000
+#define nano_per_sec 1000000000
+#define nano_per_min 60000000000
+#define nano_per_hour 3600000000000
+#define micro_per_milli 1000
+#define micro_per_sec 1000000
+#define micro_per_min 60000000
+#define micro_per_hour 3600000000
+#define milli_per_sec 1000
+#define milli_per_min 60000
+#define milli_per_hour 3600000
+#define sec_per_min 60
+#define sec_per_hour 3600
+#define min_per_hour 60
+
+type_from( n8 ) nano;
+
+#include <time.h>
+
+embed nano get_nano()
+{
+	#if OS_WINDOWS
+		static LARGE_INTEGER frequency;
+		static LARGE_INTEGER start;
+		static int initialized = 0;
+		LARGE_INTEGER current;
+
+		if( !initialized )
+		{
+			QueryPerformanceFrequency( ref_of( frequency ) );
+			QueryPerformanceCounter( ref_of( start ) );
+			initialized = 1;
+		}
+
+		QueryPerformanceCounter( ref_of( current ) );
+
+		u8 elapsed = current.QuadPart - start.QuadPart;
+		u8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
+
+		out nanoseconds;
+
+	#else
+		struct timespec ts;
+		clock_gettime( CLOCK_MONOTONIC, ref_of( ts ) );
+		out to( nano, ts.tv_sec * nano_per_sec + ts.tv_nsec );
+	#endif
+}
+
+fn nano_sleep( const nano time )
+{
+	#if OS_WINDOWS
+		static HANDLE timer = null;
+		do_once
+		{
+			timer = CreateWaitableTimer( null, TRUE, null );
+		}
+		LARGE_INTEGER freq;
+		LARGE_INTEGER start;
+		LARGE_INTEGER end;
+		QueryPerformanceFrequency( ref_of( freq ) );
+		QueryPerformanceCounter( ref_of( start ) );
+
+		f8 elapsed_ns = 0;
+		while( elapsed_ns < to_f8( time ) )
+		{
+			if( to_f8( time ) - elapsed_ns > nano_per_milli )
+			{
+				LARGE_INTEGER li;
+				li.QuadPart = -9000;
+				SetWaitableTimer( timer, ref_of( li ), 0, null, null, FALSE );
+				WaitForSingleObject( timer, INFINITE );
+			}
+			QueryPerformanceCounter( ref_of( end ) );
+			elapsed_ns = ( ( end.QuadPart - start.QuadPart ) * nano_per_sec ) / freq.QuadPart;
+		}
+	#else
+		struct timespec ts;
+		ts.tv_sec = to( __time_t, time / nano_per_sec );
+		ts.tv_nsec = to( __time_t, time mod nano_per_sec );
+		nanosleep( ref_of( ts ), nothing );
+	#endif
+}
 
 ///////
 
