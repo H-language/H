@@ -2081,8 +2081,8 @@ embed nano get_nano()
 
 		QueryPerformanceCounter( ref_of( current ) );
 
-		u8 elapsed = current.QuadPart - start.QuadPart;
-		u8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
+		n8 elapsed = current.QuadPart - start.QuadPart;
+		n8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
 
 		out nanoseconds;
 
@@ -2096,34 +2096,23 @@ embed nano get_nano()
 fn nano_sleep( const nano time )
 {
 	#if OS_WINDOWS
-		static HANDLE timer = null;
-		do_once
-		{
-			timer = CreateWaitableTimer( null, TRUE, null );
-		}
-		LARGE_INTEGER freq;
-		LARGE_INTEGER start;
-		LARGE_INTEGER end;
+		LARGE_INTEGER freq,
+		start,
+		now;
 		QueryPerformanceFrequency( ref_of( freq ) );
 		QueryPerformanceCounter( ref_of( start ) );
 
-		f8 elapsed_ns = 0;
-		while( elapsed_ns < to_f8( time ) )
-		{
-			if( to_f8( time ) - elapsed_ns > nano_per_milli )
-			{
-				LARGE_INTEGER li;
-				li.QuadPart = -9000;
-				SetWaitableTimer( timer, ref_of( li ), 0, null, null, FALSE );
-				WaitForSingleObject( timer, INFINITE );
-			}
-			QueryPerformanceCounter( ref_of( end ) );
-			elapsed_ns = ( ( end.QuadPart - start.QuadPart ) * nano_per_sec ) / freq.QuadPart;
-		}
+		static HANDLE timer = nothing;
+		once timer = CreateWaitableTimer( nothing, TRUE, nothing );
+
+		LARGE_INTEGER li = { .QuadPart = -( time / 100 ) };
+		SetWaitableTimer( timer, ref_of( li ), 0, nothing, nothing, FALSE );
+		WaitForSingleObject( timer, INFINITE );
+
+		n8 target = start.QuadPart + ( time * freq.QuadPart ) / nano_per_sec;
+		while( QueryPerformanceCounter( ref_of( now ) ), now.QuadPart < target );
 	#else
-		struct timespec ts;
-		ts.tv_sec = to( __time_t, time / nano_per_sec );
-		ts.tv_nsec = to( __time_t, time mod nano_per_sec );
+		struct timespec ts = { time / nano_per_sec, time mod nano_per_sec };
 		nanosleep( ref_of( ts ), nothing );
 	#endif
 }
