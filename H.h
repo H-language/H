@@ -1568,6 +1568,79 @@ embed byte ref get_exe_path()
 
 ///////
 
+#define nano_per_micro 1000
+#define nano_per_milli 1000000
+#define nano_per_sec 1000000000
+#define nano_per_min 60000000000
+#define nano_per_hour 3600000000000
+#define micro_per_milli 1000
+#define micro_per_sec 1000000
+#define micro_per_min 60000000
+#define micro_per_hour 3600000000
+#define milli_per_sec 1000
+#define milli_per_min 60000
+#define milli_per_hour 3600000
+#define sec_per_min 60
+#define sec_per_hour 3600
+#define min_per_hour 60
+
+type_from( n8 ) nano;
+
+embed nano get_nano()
+{
+	#if OS_WINDOWS
+		static LARGE_INTEGER frequency;
+		static LARGE_INTEGER start;
+		static int initialized = 0;
+		LARGE_INTEGER current;
+
+		if( !initialized )
+		{
+			QueryPerformanceFrequency( ref_of( frequency ) );
+			QueryPerformanceCounter( ref_of( start ) );
+			initialized = 1;
+		}
+
+		QueryPerformanceCounter( ref_of( current ) );
+
+		n8 elapsed = current.QuadPart - start.QuadPart;
+		n8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
+
+		out nanoseconds;
+
+	#else
+		struct timespec ts;
+		clock_gettime( CLOCK_MONOTONIC, ref_of( ts ) );
+		out to( nano, ts.tv_sec * nano_per_sec + ts.tv_nsec );
+	#endif
+}
+
+fn nano_sleep( const nano time )
+{
+	#if OS_WINDOWS
+		LARGE_INTEGER freq,
+		start,
+		now;
+		QueryPerformanceFrequency( ref_of( freq ) );
+		QueryPerformanceCounter( ref_of( start ) );
+
+		static HANDLE timer = nothing;
+		once timer = CreateWaitableTimer( nothing, TRUE, nothing );
+
+		LARGE_INTEGER li = { .QuadPart = -( time / 100 ) };
+		SetWaitableTimer( timer, ref_of( li ), 0, nothing, nothing, FALSE );
+		WaitForSingleObject( timer, INFINITE );
+
+		n8 target = start.QuadPart + ( time * freq.QuadPart ) / nano_per_sec;
+		while( QueryPerformanceCounter( ref_of( now ) ), now.QuadPart < target );
+	#else
+		struct timespec ts = { time / nano_per_sec, time mod nano_per_sec };
+		nanosleep( ref_of( ts ), nothing );
+	#endif
+}
+
+///////
+
 #define DECLARE_TYPE_2D( TYPE )\
 	fusion( TYPE##x2 )\
 	{\
@@ -1841,79 +1914,210 @@ DECLARE_TYPE_MULTI_R( 8 );
 
 ///////
 
-type_from( r4x3 ) vector;
-#define _vector( X, Y, Z ) make( r4x3, .x = X, .y = Y, .z = Z )
-#define _eval_vector( X_Y_Z... ) _vector( X_Y_Z )
-#define vector( X_Y_Z... ) _eval_vector( DEFAULTS( ( 0.0, 0.0, 0.0 ), X_Y_Z ) )
+type_from( r4x2 ) vec2;
+#define _vec2( X, Y ) make( r4x2, .x = X, .y = Y )
+#define _eval_vec2( X_Y... ) _vec2( X_Y )
+#define vec2( X_Y... ) _eval_vec2( DEFAULTS( ( 0.0, 0.0 ), X_Y ) )
 
-#define vector_invert r4x3_invert
-#define vector_add r4x3_add
-#define vector_add_r4 r4x3_add_r4
-#define vector_sub r4x3_sub
-#define vector_sub_r4 r4x3_sub_r4
-#define vector_mul r4x3_mul
-#define vector_mul_r4 r4x3_mul_r4
-#define vector_div r4x3_div
-#define vector_div_r4 r4x3_div_r4
-#define vector_dot r4x3_dot
-#define vector_cross r4x3_cross
-#define vector_norm r4x3_norm
+#define vec2_invert r4x2_invert
+#define vec2_add r4x2_add
+#define vec2_add_r4 r4x2_add_r4
+#define vec2_sub r4x2_sub
+#define vec2_sub_r4 r4x2_sub_r4
+#define vec2_mul r4x2_mul
+#define vec2_mul_r4 r4x2_mul_r4
+#define vec2_div r4x2_div
+#define vec2_div_r4 r4x2_div_r4
+#define vec2_dot r4x2_dot
+#define vec2_norm r4x2_norm
+
+type( spinor )
+{
+    r4 r;
+    r4 i;
+};
+
+#define spinor( R, I ) make( spinor, .r = R, .i = I )
+#define spinor_default() spinor( 1.0, 0.0 )
+
+embed spinor new_spinor( const r4 angle )
+{
+    out spinor( r4_cos( angle ), r4_sin( angle ) );
+}
+
+embed spinor invert_spinor( const spinor s )
+{
+    out spinor( s.r, -s.i );
+}
+
+embed spinor spinor_add( const spinor a, const spinor b )
+{
+    out spinor( a.r + b.r, a.i + b.i );
+}
+
+embed spinor spinor_sub( const spinor a, const spinor b )
+{
+    out spinor( a.r - b.r, a.i - b.i );
+}
+
+embed spinor spinor_mul_r4( const spinor s, const r4 f )
+{
+    out spinor( s.r * f, s.i * f );
+}
+
+#define spinor_halve( S ) spinor_mul_r4( S, 0.5 )
+
+embed spinor spinor_mul( const spinor a, const spinor b )
+{
+    out spinor( a.r * b.r - a.i * b.i, a.r * b.i + a.i * b.r );
+}
+
+embed vec2 vec2_rotate( const vec2 v, const spinor s )
+{
+    temp const r4 cos2 = s.r * s.r - s.i * s.i;
+    temp const r4 sin2 = 2.0 * s.r * s.i;
+    out vec2( cos2 * v.x - sin2 * v.y, sin2 * v.x + cos2 * v.y );
+}
+
+type( planor )
+{
+    spinor s;
+    spinor t;
+};
+
+#define planor( S, T ) make( planor, .s = S, .t = T )
+#define planor_default() planor( spinor_default(), spinor( 0.0, 0.0 ) )
+
+embed planor new_planor( const spinor s, const vec2 pos )
+{
+    temp const spinor translation = spinor( pos.x, pos.y );
+    out planor( s, spinor_halve( spinor_mul( translation, s ) ) );
+}
+
+embed planor invert_planor( const planor p )
+{
+    temp const spinor inv_s = invert_spinor( p.s );
+    temp const spinor inv_t = spinor_mul( spinor_mul( inv_s, p.t ), inv_s );
+    out planor( inv_s, spinor( -inv_t.r, -inv_t.i ) );
+}
+
+embed planor planor_mul( const planor a, const planor b )
+{
+    out planor( 
+        spinor_mul( a.s, b.s ),
+        spinor_add( spinor_mul( a.s, b.t ), spinor_mul( a.t, b.s ) )
+    );
+}
+
+embed planor planor_set_rotation( const planor p, const spinor new_s )
+{
+    temp const spinor trans_complex = spinor_mul( spinor_mul_r4( p.t, 2.0 ), invert_spinor( p.s ) );
+    
+    temp const spinor new_t = spinor_halve( spinor_mul( trans_complex, new_s ) );
+    
+    out planor( new_s, new_t );
+}
+
+embed planor planor_add_spinor( const planor p, const spinor s )
+{
+    temp const spinor new_s = spinor_mul( p.s, s );
+    out planor_set_rotation( p, new_s );
+}
+
+embed planor planor_add_vec2( const planor p, const vec2 delta )
+{
+    temp const spinor delta_dual = spinor_halve( spinor( delta.x, delta.y ) );
+    out planor( p.s, spinor_add( p.t, spinor_mul( delta_dual, p.s ) ) );
+}
+
+embed planor planor_translate( const planor p, const vec2 delta )
+{
+    temp const vec2 world_delta = vec2_rotate( delta, p.s );
+    out planor_add_vec2( p, world_delta );
+}
+
+embed vec2 vec2_transform( const vec2 v, const planor p )
+{
+    temp const vec2 rotated = vec2_rotate( v, p.s );
+    temp const spinor trans_complex = spinor_mul( spinor_mul_r4( p.t, 2.0 ), invert_spinor( p.s ) );
+    out vec2( rotated.x + trans_complex.r, rotated.y + trans_complex.i );
+}
+
+///////
+
+type_from( r4x3 ) vec3;
+#define _vec3( X, Y, Z ) make( r4x3, .x = X, .y = Y, .z = Z )
+#define _eval_vec3( X_Y_Z... ) _vec3( X_Y_Z )
+#define vec3( X_Y_Z... ) _eval_vec3( DEFAULTS( ( 0.0, 0.0, 0.0 ), X_Y_Z ) )
+
+#define vec3_invert r4x3_invert
+#define vec3_add r4x3_add
+#define vec3_add_r4 r4x3_add_r4
+#define vec3_sub r4x3_sub
+#define vec3_sub_r4 r4x3_sub_r4
+#define vec3_mul r4x3_mul
+#define vec3_mul_r4 r4x3_mul_r4
+#define vec3_div r4x3_div
+#define vec3_div_r4 r4x3_div_r4
+#define vec3_dot r4x3_dot
+#define vec3_cross r4x3_cross
+#define vec3_norm r4x3_norm
 
 type_from( r4 ) hangle;
 
 type( rotor )
 {
-	vector v;
+	vec3 v;
 	hangle h;
 };
 
 #define rotor( V, H ) make( rotor, .v = V, .h = H )
-#define rotor_default() rotor( vector( 0.0 ), 1.0 )
+#define rotor_default() rotor( vec3( 0.0 ), 1.0 )
 
-embed rotor new_rotor( const vector norm_v, const hangle h )
+embed rotor new_rotor( const vec3 norm_v, const hangle h )
 {
-	out rotor( vector_mul_r4( norm_v, r4_sin( h ) ), r4_cos( h ) );
+	out rotor( vec3_mul_r4( norm_v, r4_sin( h ) ), r4_cos( h ) );
 }
 
 //
 
 embed rotor yaw_rotor( const hangle h ) // Z AXIS
 {
-	out rotor( vector( 0., 0., sin( h ) ), cos( h ) );
+	out rotor( vec3( 0., 0., sin( h ) ), cos( h ) );
 }
 
 embed rotor pitch_rotor( const hangle h ) // Y AXIS
 {
-	out rotor( vector( 0., sin( h ), 0. ), cos( h ) );
+	out rotor( vec3( 0., sin( h ), 0. ), cos( h ) );
 }
 
 embed rotor roll_rotor( const hangle h ) // X AXIS
 {
-	out rotor( vector( sin( h ), 0., 0. ), cos( h ) );
+	out rotor( vec3( sin( h ), 0., 0. ), cos( h ) );
 }
 
 //
 
 embed rotor invert_rotor( const rotor r )
 {
-	out rotor( vector_invert( r.v ), r.h );
+	out rotor( vec3_invert( r.v ), r.h );
 }
 
 //
 
 embed rotor rotor_add( const rotor a, const rotor b )
 {
-	out rotor( vector_add( a.v, b.v ), a.h + b.h );
+	out rotor( vec3_add( a.v, b.v ), a.h + b.h );
 }
 
 embed rotor rotor_sub( const rotor a, const rotor b )
 {
-	out rotor( vector_sub( a.v, b.v ), a.h - b.h );
+	out rotor( vec3_sub( a.v, b.v ), a.h - b.h );
 }
 
 embed rotor rotor_mul_r4( const rotor r, const r4 f )
 {
-	out rotor( vector_mul_r4( r.v, f ), r.h * f );
+	out rotor( vec3_mul_r4( r.v, f ), r.h * f );
 }
 
 #define rotor_halve( R ) rotor_mul_r4( R, 0.5 )
@@ -1925,9 +2129,9 @@ embed rotor rotor_mul( const rotor a, const rotor b )
 	temp const r4 k = ( a.h - a.v.y ) * ( b.h + b.v.z );
 	temp const r4 l = i + j + k;
 	temp const r4 m = 0.5 * ( ( a.v.z - a.v.x ) * ( b.v.x - b.v.y ) + l );
-	out rotor( vector( ( a.h + a.v.x ) * ( b.h + b.v.x ) + m - l, ( a.h - a.v.x ) * ( b.v.y + b.v.z ) + m - k, ( a.v.y + a.v.z ) * ( b.h - b.v.x ) + m - j ), ( a.v.z - a.v.y ) * ( b.v.y - b.v.z ) + m - i );
+	out rotor( vec3( ( a.h + a.v.x ) * ( b.h + b.v.x ) + m - l, ( a.h - a.v.x ) * ( b.v.y + b.v.z ) + m - k, ( a.v.y + a.v.z ) * ( b.h - b.v.x ) + m - j ), ( a.v.z - a.v.y ) * ( b.v.y - b.v.z ) + m - i );
 
-	//out rotor( vector_add( vector_add( vector_mul_r4( b.v, a.h ), vector_mul_r4( a.v, b.h ) ), vector_cross( a.v, b.v ) ), ( a.h * b.h ) - vector_dot( a.v, b.v ) );
+	//out rotor( vec3_add( vec3_add( vec3_mul_r4( b.v, a.h ), vec3_mul_r4( a.v, b.h ) ), vec3_cross( a.v, b.v ) ), ( a.h * b.h ) - vec3_dot( a.v, b.v ) );
 }
 
 //
@@ -1940,30 +2144,30 @@ embed rotor construct_rotor( const hangle yaw, const hangle pitch, const hangle 
 	temp const r4 cp = r4_cos( pitch );
 	temp const r4 sr = r4_sin( roll );
 	temp const r4 cr = r4_cos( roll );
-	out rotor( vector( sr * cp * cy - cr * sp * sy, cr * sp * cy + sr * cp * sy, cr * cp * sy - sr * sp * cy ), cr * cp * cy + sr * sp * sy );
+	out rotor( vec3( sr * cp * cy - cr * sp * sy, cr * sp * cy + sr * cp * sy, cr * cp * sy - sr * sp * cy ), cr * cp * cy + sr * sp * sy );
 
 	//out rotor_mul( rotor_mul( yaw_rotor( yaw ), pitch_rotor( pitch ) ), roll_rotor( roll ) );
 }
 
 //
 
-embed rotor look_rotor( const vector from_v, const vector to_v, const hangle roll )
+embed rotor look_rotor( const vec3 from_v, const vec3 to_v, const hangle roll )
 {
-	temp const vector dir = vector_norm( vector_sub( to_v, from_v ) );
+	temp const vec3 dir = vec3_norm( vec3_sub( to_v, from_v ) );
 	out construct_rotor( r4_atanyx( dir.y, dir.x ) * 0.5, r4_asin( -dir.z ) * 0.5, roll );
 }
 
 //
 
-embed vector vector_rotate( const vector v, const rotor r )
+embed vec3 vec3_rotate( const vec3 v, const rotor r )
 {
 	temp const r4 a = r.v.y * v.z - r.v.z * v.y;
 	temp const r4 b = r.v.z * v.x - r.v.x * v.z;
 	temp const r4 c = r.v.x * v.y - r.v.y * v.x;
-	out vector( v.x + 2.0 * ( r.h * a + r.v.y * c - r.v.z * b ), v.y + 2.0 * ( r.h * b + r.v.z * a - r.v.x * c ), v.z + 2.0 * ( r.h * c + r.v.x * b - r.v.y * a ) );
+	out vec3( v.x + 2.0 * ( r.h * a + r.v.y * c - r.v.z * b ), v.y + 2.0 * ( r.h * b + r.v.z * a - r.v.x * c ), v.z + 2.0 * ( r.h * c + r.v.x * b - r.v.y * a ) );
 
-	//temp const vector c = vector_mul_r4( vector_cross( r.v, v ), 2.0 );
-	//out vector_sub( vector_add( v, vector_mul_r4( c, r.h ) ), vector_cross( c, r.v ) );
+	//temp const vec3 c = vec3_mul_r4( vec3_cross( r.v, v ), 2.0 );
+	//out vec3_sub( vec3_add( v, vec3_mul_r4( c, r.h ) ), vec3_cross( c, r.v ) );
 }
 
 ///////
@@ -1976,9 +2180,9 @@ type( motor )
 
 #define motor( R, T ) make( motor, .r = R, .t = T )
 
-embed motor new_motor( const rotor r, const vector pos )
+embed motor new_motor( const rotor r, const vec3 pos )
 {
-	out motor( r, rotor_halve( rotor_mul( rotor( vector( pos.x, pos.y, pos.z ), 0. ), r ) ) );
+	out motor( r, rotor_halve( rotor_mul( rotor( vec3( pos.x, pos.y, pos.z ), 0. ), r ) ) );
 }
 
 embed motor invert_motor( const motor m )
@@ -1991,9 +2195,9 @@ embed motor motor_mul( const motor a, const motor b )
 	out motor( rotor_mul( a.r, b.r ), rotor_add( rotor_mul( a.r, b.t ), rotor_mul( a.t, b.r ) ) );
 }
 
-embed vector vector_transform( const vector v, const motor m )
+embed vec3 vec3_transform( const vec3 v, const motor m )
 {
-	out motor_mul( motor_mul( m, motor( rotor_default(), rotor( v, 0.0 ) ) ), motor( rotor( vector_invert( m.r.v ), m.r.h ), rotor( m.t.v, -m.t.h ) ) ) .t.v;
+	out motor_mul( motor_mul( m, motor( rotor_default(), rotor( v, 0.0 ) ) ), motor( rotor( vec3_invert( m.r.v ), m.r.h ), rotor( m.t.v, -m.t.h ) ) ) .t.v;
 }
 
 ///////
@@ -2010,111 +2214,38 @@ embed projection new_projection( const float fov_degrees )
 	out projection( 1.0 / r4_tan( fov_degrees * 0.5 ) );
 }
 
-embed vector world_to_view( const vector v )
+embed vec3 world_to_view( const vec3 v )
 {
-	out vector( -v.y, -v.z, v.x );
+	out vec3( -v.y, -v.z, v.x );
 }
 
-embed vector view_to_world( vector v )
+embed vec3 view_to_world( vec3 v )
 {
 	//v.y = -v.y;
-	out vector( v.z, -v.x, -v.y );
+	out vec3( v.z, -v.x, -v.y );
 }
 
-embed vector vector_project( const vector world_v, const projection p )
+embed vec3 vec3_project( const vec3 world_v, const projection p )
 {
-	vector pos = world_to_view( world_v );
+	vec3 pos = world_to_view( world_v );
 	//pos.y = -pos.y;
 	float z = pos.z;
 
-	out vector( pos.x / z * p.view_scale, pos.y / z * p.view_scale, 1.0 / z );
+	out vec3( pos.x / z * p.view_scale, pos.y / z * p.view_scale, 1.0 / z );
 }
 
 ///////
 
 type_from( motor ) observer;
 
-embed observer new_observer( const vector from_v, const vector to_v, const hangle roll )
+embed observer new_observer( const vec3 from_v, const vec3 to_v, const hangle roll )
 {
 	out invert_motor( new_motor( look_rotor( from_v, to_v, roll ), from_v ) );
 }
 
-embed vector vector_observe( const vector world_v, const observer o, const projection p )
+embed vec3 vec3_observe( const vec3 world_v, const observer o, const projection p )
 {
-	out vector_project( vector_transform( world_v, o ), p );
-}
-
-///////
-
-#define nano_per_micro 1000
-#define nano_per_milli 1000000
-#define nano_per_sec 1000000000
-#define nano_per_min 60000000000
-#define nano_per_hour 3600000000000
-#define micro_per_milli 1000
-#define micro_per_sec 1000000
-#define micro_per_min 60000000
-#define micro_per_hour 3600000000
-#define milli_per_sec 1000
-#define milli_per_min 60000
-#define milli_per_hour 3600000
-#define sec_per_min 60
-#define sec_per_hour 3600
-#define min_per_hour 60
-
-type_from( n8 ) nano;
-
-embed nano get_nano()
-{
-	#if OS_WINDOWS
-		static LARGE_INTEGER frequency;
-		static LARGE_INTEGER start;
-		static int initialized = 0;
-		LARGE_INTEGER current;
-
-		if( !initialized )
-		{
-			QueryPerformanceFrequency( ref_of( frequency ) );
-			QueryPerformanceCounter( ref_of( start ) );
-			initialized = 1;
-		}
-
-		QueryPerformanceCounter( ref_of( current ) );
-
-		n8 elapsed = current.QuadPart - start.QuadPart;
-		n8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
-
-		out nanoseconds;
-
-	#else
-		struct timespec ts;
-		clock_gettime( CLOCK_MONOTONIC, ref_of( ts ) );
-		out to( nano, ts.tv_sec * nano_per_sec + ts.tv_nsec );
-	#endif
-}
-
-fn nano_sleep( const nano time )
-{
-	#if OS_WINDOWS
-		LARGE_INTEGER freq,
-		start,
-		now;
-		QueryPerformanceFrequency( ref_of( freq ) );
-		QueryPerformanceCounter( ref_of( start ) );
-
-		static HANDLE timer = nothing;
-		once timer = CreateWaitableTimer( nothing, TRUE, nothing );
-
-		LARGE_INTEGER li = { .QuadPart = -( time / 100 ) };
-		SetWaitableTimer( timer, ref_of( li ), 0, nothing, nothing, FALSE );
-		WaitForSingleObject( timer, INFINITE );
-
-		n8 target = start.QuadPart + ( time * freq.QuadPart ) / nano_per_sec;
-		while( QueryPerformanceCounter( ref_of( now ) ), now.QuadPart < target );
-	#else
-		struct timespec ts = { time / nano_per_sec, time mod nano_per_sec };
-		nanosleep( ref_of( ts ), nothing );
-	#endif
+	out vec3_project( vec3_transform( world_v, o ), p );
 }
 
 ///////
