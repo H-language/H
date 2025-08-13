@@ -21,6 +21,7 @@
 	#include <sys/stat.h>
 	#include <sys/mman.h>
 	#include <dirent.h>
+	#include <time.h>
 	#include <fcntl.h>
 	#include <unistd.h>
 	#define SEPARATOR "/"
@@ -28,6 +29,7 @@
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
 		#include <X11/extensions/Xrender.h>
+		#include <X11/XKBlib.h>
 	#endif
 	//
 #elif defined( _WIN32 )
@@ -2003,7 +2005,7 @@ type( projection )
 
 #define projection( VIEW_SCALE ) make( projection, .view_scale = VIEW_SCALE )
 
-projection new_projection( const float fov_degrees )
+embed projection new_projection( const float fov_degrees )
 {
 	out projection( 1.0 / r4_tan( fov_degrees * 0.5 ) );
 }
@@ -2061,8 +2063,6 @@ embed vector vector_observe( const vector world_v, const observer o, const proje
 #define min_per_hour 60
 
 type_from( n8 ) nano;
-
-#include <time.h>
 
 embed nano get_nano()
 {
