@@ -2314,7 +2314,7 @@ embed thread _new_cpu_thread( thread_fn function, anon ref ref_param )
 	out_thread.function = function;
 	out_thread.id = 0;
 	#if OS_WINDOWS
-		ct->id = CreateThread( nothing, 0, to( LPTHREAD_START_ROUTINE, t.function ), ref_param, 0, null );
+		out_thread.id = CreateThread( nothing, 0, to( LPTHREAD_START_ROUTINE, out_thread.function ), ref_param, 0, nothing );
 	#elif OS_LINUX
 		pthread_create( ref_of( out_thread.id ), nothing, out_thread.function, ref_param );
 	#endif
