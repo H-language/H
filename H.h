@@ -23,7 +23,9 @@
 	#include <dirent.h>
 	#include <time.h>
 	#include <fcntl.h>
+	#include <pthread.h>
 	#include <unistd.h>
+	#include <alsa/asoundlib.h>
 	#define SEPARATOR "/"
 	#ifdef C7H16
 		#include <X11/Xlib.h>
@@ -51,6 +53,40 @@
 	#undef OS_UNKNOWN
 	#define OS_UNKNOWN 1
 	#define OS_NAME "unknown"
+#endif
+
+///////
+
+#define COMPILER_GCC 0
+#define COMPILER_TCC 0
+#define COMPILER_CLANG 0
+#define COMPILER_MSVC 0
+#define COMPILER_UNKNOWN 0
+//
+#if defined( __clang__ )
+	#undef COMPILER_CLANG
+	#define COMPILER_CLANG 1
+	#define COMPILER_NAME "Clang"
+	//
+#elif defined( __TINYC__ )
+	#undef COMPILER_TCC
+	#define COMPILER_TCC 1
+	#define COMPILER_NAME "TCC"
+	//
+#elif defined( __GNUC__ )
+	#undef COMPILER_GCC
+	#define COMPILER_GCC 1
+	#define COMPILER_NAME "GCC"
+	//
+#elif defined( _MSC_VER )
+	#undef COMPILER_MSVC
+	#define COMPILER_MSVC 1
+	#define COMPILER_NAME "MSVC"
+	//
+#else
+	#undef COMPILER_UNKNOWN
+	#define COMPILER_UNKNOWN 1
+	#define COMPILER_NAME "unknown"
 #endif
 
 ///////
@@ -373,6 +409,8 @@ type_from( i4 ) out_state;
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( size_of( TYPE ), DEFAULT( 1, AMOUNT ) ) )
 #define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
 
+#define delete_ref free
+
 #define bytes_copy( FROM_REF, FROM_SIZE, TO_REF ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
 #define bytes_copy_until( FROM_REF, TO_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
 #define bytes_copy_until_any( FROM_REF, TO_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
@@ -591,6 +629,14 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 	embed T##N T##N##_snap_bit( const T##N v, const T##N b )\
 	{\
 		out SNAP_BIT( v, b );\
+	}\
+	embed T##N T##N##_random()\
+	{\
+		out T##N( rand() );\
+	}\
+	embed T##N T##N##_random_range( const T##N minimum, const T##N maximum )\
+	{\
+		out minimum + T##N( ( r4( rand() ) / r4( RAND_MAX ) ) * r4( maximum - minimum + 1 ) );\
 	}
 
 #define FUNCTION_GROUP_BASE_IR( T, N )\
@@ -670,6 +716,18 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 	embed r##N r##N##_smooth( const r##N v )\
 	{\
 		out SMOOTH( v );\
+	}\
+	embed r##N r##N##_random()\
+	{\
+		out r##N( rand() );\
+	}\
+	embed r##N r##N##_random_unit()\
+	{\
+		out r##N##_random() / r##N( RAND_MAX );\
+	}\
+	embed r##N r##N##_random_range( const r##N minimum, const r##N maximum )\
+	{\
+		out minimum + r##N##_random_unit() * ( maximum - minimum );\
 	}
 
 FUNCTION_GROUP_N( 1 );
@@ -1900,17 +1958,11 @@ DECLARE_TYPE_MULTI_R( 8 );
 #define point_in_box( X, Y, TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y ) all( X >= TOPLEFT_X, Y >= TOPLEFT_Y, X <= BOTTOMRIGHT_X, Y <= BOTTOMRIGHT_Y )
 #define point_not_in_box( X, Y, TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y ) any( X < TOPLEFT_X, Y < TOPLEFT_Y, X > BOTTOMRIGHT_X, Y > BOTTOMRIGHT_Y )
 
-#define box_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H )\
-	all( point_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
+#define box_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) all( point_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
+#define box_not_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) any( point_not_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_not_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
 
-#define box_not_in_size( TOPLEFT_X, TOPLEFT_Y, BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H )\
-	any( point_not_in_size( TOPLEFT_X, TOPLEFT_Y, W, H ), point_not_in_size( BOTTOMRIGHT_X, BOTTOMRIGHT_Y, W, H ) )
-
-#define box_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y )\
-	all( point_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
-
-#define box_not_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y )\
-	any( point_not_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_not_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
+#define box_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) all( point_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
+#define box_not_in_box( TL1_X, TL1_Y, BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) any( point_not_in_box( TL1_X, TL1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ), point_not_in_box( BR1_X, BR1_Y, TL2_X, TL2_Y, BR2_X, BR2_Y ) )
 
 ///////
 
@@ -1930,11 +1982,12 @@ type_from( r4x2 ) vec2;
 #define vec2_div_r4 r4x2_div_r4
 #define vec2_dot r4x2_dot
 #define vec2_norm r4x2_norm
+#define vec2_distance r4x2_distance
 
 type( spinor )
 {
-    r4 r;
-    r4 i;
+	r4 r;
+	r4 i;
 };
 
 #define spinor( R, I ) make( spinor, .r = R, .i = I )
@@ -1942,47 +1995,47 @@ type( spinor )
 
 embed spinor new_spinor( const r4 angle )
 {
-    out spinor( r4_cos( angle ), r4_sin( angle ) );
+	out spinor( r4_cos( angle ), r4_sin( angle ) );
 }
 
 embed spinor invert_spinor( const spinor s )
 {
-    out spinor( s.r, -s.i );
+	out spinor( s.r, -s.i );
 }
 
 embed spinor spinor_add( const spinor a, const spinor b )
 {
-    out spinor( a.r + b.r, a.i + b.i );
+	out spinor( a.r + b.r, a.i + b.i );
 }
 
 embed spinor spinor_sub( const spinor a, const spinor b )
 {
-    out spinor( a.r - b.r, a.i - b.i );
+	out spinor( a.r - b.r, a.i - b.i );
 }
 
 embed spinor spinor_mul_r4( const spinor s, const r4 f )
 {
-    out spinor( s.r * f, s.i * f );
+	out spinor( s.r * f, s.i * f );
 }
 
 #define spinor_halve( S ) spinor_mul_r4( S, 0.5 )
 
 embed spinor spinor_mul( const spinor a, const spinor b )
 {
-    out spinor( a.r * b.r - a.i * b.i, a.r * b.i + a.i * b.r );
+	out spinor( a.r * b.r - a.i * b.i, a.r * b.i + a.i * b.r );
 }
 
 embed vec2 vec2_rotate( const vec2 v, const spinor s )
 {
-    temp const r4 cos2 = s.r * s.r - s.i * s.i;
-    temp const r4 sin2 = 2.0 * s.r * s.i;
-    out vec2( cos2 * v.x - sin2 * v.y, sin2 * v.x + cos2 * v.y );
+	temp const r4 cos2 = s.r * s.r - s.i * s.i;
+	temp const r4 sin2 = 2.0 * s.r * s.i;
+	out vec2( cos2 * v.x - sin2 * v.y, sin2 * v.x + cos2 * v.y );
 }
 
 type( planor )
 {
-    spinor s;
-    spinor t;
+	spinor s;
+	spinor t;
 };
 
 #define planor( S, T ) make( planor, .s = S, .t = T )
@@ -1990,57 +2043,52 @@ type( planor )
 
 embed planor new_planor( const spinor s, const vec2 pos )
 {
-    temp const spinor translation = spinor( pos.x, pos.y );
-    out planor( s, spinor_halve( spinor_mul( translation, s ) ) );
+	out planor( s, spinor_halve( spinor_mul( spinor( pos.x, pos.y ), s ) ) );
+}
+
+embed vec2 planor_get_vec2( const planor p )
+{
+	out vec2( 2.0 * ( p.t.r * p.s.r + p.t.i * p.s.i ), 2.0 * ( p.t.i * p.s.r - p.t.r * p.s.i ) );
 }
 
 embed planor invert_planor( const planor p )
 {
-    temp const spinor inv_s = invert_spinor( p.s );
-    temp const spinor inv_t = spinor_mul( spinor_mul( inv_s, p.t ), inv_s );
-    out planor( inv_s, spinor( -inv_t.r, -inv_t.i ) );
+	temp const spinor inv_s = invert_spinor( p.s );
+	temp const spinor inv_t = spinor_mul( spinor_mul( inv_s, p.t ), inv_s );
+	out planor( inv_s, spinor( -inv_t.r, -inv_t.i ) );
 }
 
 embed planor planor_mul( const planor a, const planor b )
 {
-    out planor( 
-        spinor_mul( a.s, b.s ),
-        spinor_add( spinor_mul( a.s, b.t ), spinor_mul( a.t, b.s ) )
-    );
+	out planor( spinor_mul( a.s, b.s ), spinor_add( spinor_mul( a.s, b.t ), spinor_mul( a.t, b.s ) ) );
 }
 
 embed planor planor_set_rotation( const planor p, const spinor new_s )
 {
-    temp const spinor trans_complex = spinor_mul( spinor_mul_r4( p.t, 2.0 ), invert_spinor( p.s ) );
-    
-    temp const spinor new_t = spinor_halve( spinor_mul( trans_complex, new_s ) );
-    
-    out planor( new_s, new_t );
+	out planor( new_s, spinor_halve( spinor_mul( spinor_mul( spinor_mul_r4( p.t, 2.0 ), invert_spinor( p.s ) ), new_s ) ) );
 }
 
 embed planor planor_add_spinor( const planor p, const spinor s )
 {
-    temp const spinor new_s = spinor_mul( p.s, s );
-    out planor_set_rotation( p, new_s );
+	out planor_set_rotation( p, spinor_mul( p.s, s ) );
 }
 
 embed planor planor_add_vec2( const planor p, const vec2 delta )
 {
-    temp const spinor delta_dual = spinor_halve( spinor( delta.x, delta.y ) );
-    out planor( p.s, spinor_add( p.t, spinor_mul( delta_dual, p.s ) ) );
+	out planor( p.s, spinor_add( p.t, spinor_mul( spinor_halve( spinor( delta.x, delta.y ) ), p.s ) ) );
 }
 
 embed planor planor_translate( const planor p, const vec2 delta )
 {
-    temp const vec2 world_delta = vec2_rotate( delta, p.s );
-    out planor_add_vec2( p, world_delta );
+	temp const vec2 world_delta = vec2_rotate( delta, p.s );
+	out planor_add_vec2( p, world_delta );
 }
 
 embed vec2 vec2_transform( const vec2 v, const planor p )
 {
-    temp const vec2 rotated = vec2_rotate( v, p.s );
-    temp const spinor trans_complex = spinor_mul( spinor_mul_r4( p.t, 2.0 ), invert_spinor( p.s ) );
-    out vec2( rotated.x + trans_complex.r, rotated.y + trans_complex.i );
+	temp const r4 cos2 = p.s.r * p.s.r - p.s.i * p.s.i;
+	temp const r4 sin2 = 2.0 * p.s.r * p.s.i;
+	out vec2( cos2 * v.x - sin2 * v.y + ( 2.0 * ( p.t.r * p.s.r + p.t.i * p.s.i ) ), sin2 * v.x + cos2 * v.y + ( 2.0 * ( p.t.i * p.s.r - p.t.r * p.s.i ) ) );
 }
 
 ///////
@@ -2197,7 +2245,7 @@ embed motor motor_mul( const motor a, const motor b )
 
 embed vec3 vec3_transform( const vec3 v, const motor m )
 {
-	out motor_mul( motor_mul( m, motor( rotor_default(), rotor( v, 0.0 ) ) ), motor( rotor( vec3_invert( m.r.v ), m.r.h ), rotor( m.t.v, -m.t.h ) ) ) .t.v;
+	out motor_mul( motor_mul( m, motor( rotor_default(), rotor( v, 0.0 ) ) ), motor( rotor( vec3_invert( m.r.v ), m.r.h ), rotor( m.t.v, -m.t.h ) ) ).t.v;
 }
 
 ///////
@@ -2247,6 +2295,53 @@ embed vec3 vec3_observe( const vec3 world_v, const observer o, const projection 
 {
 	out vec3_project( vec3_transform( world_v, o ), p );
 }
+
+///////
+
+type_from( PICK( OS_LINUX, pthread_t, HANDLE ) ) thread_id;
+
+fn_type( anon ref, anon ref ) thread_fn;
+
+type( thread )
+{
+	thread_id id;
+	thread_fn function;
+};
+
+embed thread _new_cpu_thread( thread_fn function, anon ref ref_param )
+{
+	thread out_thread;
+	out_thread.function = function;
+	out_thread.id = 0;
+	#if OS_WINDOWS
+		ct->id = CreateThread( nothing, 0, to( LPTHREAD_START_ROUTINE, t.function ), ref_param, 0, null );
+	#elif OS_LINUX
+		pthread_create( ref_of( out_thread.id ), nothing, out_thread.function, ref_param );
+	#endif
+
+	out out_thread;
+}
+#define new_cpu_thread( FN, REF_PARAM ) _new_cpu_thread( to( thread_fn, FN ), to( anon ref, REF_PARAM ) )
+
+#if OS_LINUX
+    #define thread_join( THREAD ) pthread_join( THREAD.id, nothing )
+#elif OS_WINDOWS
+    #define thread_join( THREAD ) WaitForSingleObject( THREAD.id, INFINITE )
+#endif
+
+type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
+
+#if OS_LINUX
+	#define lock_thread( LOCK ) pthread_mutex_lock( ref_of( LOCK ) )
+	#define unlock_thread( LOCK ) pthread_mutex_unlock( ref_of( LOCK ) )
+	#define thread_add_lock( LOCK ) pthread_mutex_init( ref_of( LOCK ), nothing )
+	#define thread_remove_lock( LOCK ) pthread_mutex_destroy( ref_of( LOCK ) )
+#elif OS_WINDOWS
+	#define lock_thread( LOCK ) EnterCriticalSection( ref_of( LOCK ) )
+	#define unlock_thread( LOCK ) LeaveCriticalSection( ref_of( LOCK ) )
+	#define thread_add_lock( LOCK ) InitializeCriticalSection( ref_of( LOCK ) )
+	#define thread_remove_lock( LOCK ) DeleteCriticalSection( ref_of( LOCK ) )
+#endif
 
 ///////
 
