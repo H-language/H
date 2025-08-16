@@ -2324,9 +2324,9 @@ embed thread _new_cpu_thread( thread_fn function, anon ref ref_param )
 #define new_cpu_thread( FN, REF_PARAM ) _new_cpu_thread( to( thread_fn, FN ), to( anon ref, REF_PARAM ) )
 
 #if OS_LINUX
-    #define thread_join( THREAD ) pthread_join( THREAD.id, nothing )
+	#define wait_for_thread( THREAD ) pthread_join( THREAD.id, nothing )
 #elif OS_WINDOWS
-    #define thread_join( THREAD ) WaitForSingleObject( THREAD.id, INFINITE )
+	#define wait_for_thread( THREAD ) WaitForSingleObject( THREAD.id, INFINITE )
 #endif
 
 type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
