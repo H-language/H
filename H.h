@@ -406,6 +406,10 @@ type_from( i4 ) out_state;
 
 ///////
 
+#define n_to_bits( N ) pick( ( N ) <= 2, 1, pick( ( N ) <= 4, 2, pick( ( N ) <= 8, 3, pick( ( N ) <= 16, 4, pick( ( N ) <= 32, 5, pick( ( N ) <= 64, 6, pick( ( N ) <= 128, 7, pick( ( N ) <= 256, 8, 9 ) ) ) ) ) ) ) )
+
+///////
+
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( size_of( TYPE ), DEFAULT( 1, AMOUNT ) ) )
 #define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
 
@@ -456,14 +460,12 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 
 ///////
 
-#define PACKED __attribute__( ( packed ) )
-
 #define variant struct
 
 #define _type_make( NAME, REF, EXTRA... )\
 	type_from( struct NAME REF ) NAME;\
 	EXTRA;\
-	struct PACKED NAME
+	struct NAME
 #define type( NAME ) _type_make( NAME, )
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
@@ -480,7 +482,7 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 
 #define fusion( NAME )\
 	type_from( union NAME ) NAME;\
-	union PACKED NAME
+	union NAME
 
 #define group( NAME, TYPE... )\
 	type_from( DEFAULT( byte, TYPE ) ) NAME;\
@@ -790,6 +792,149 @@ FUNCTION_GROUP_R( 8 );
 #define _args_next_r8 double
 #define _args_next_ref long ref
 #define args_next( ARGS, TYPE ) va_arg( ARGS, _args_next_##TYPE )
+
+///////
+
+#define LZSS_SECTION 4096
+#define LZSS_LOOKAHEAD 17
+#define LZSS_MIN_MATCH 2
+
+embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byte const_ref out_bytes )
+{
+	temp const byte ref in_ref = in_bytes;
+	temp const byte const_ref in_end = in_ref + bytes_size;
+	temp byte ref flag_ref = out_bytes;
+	temp byte ref out_ref = flag_ref + 1;
+	temp byte flags = 0;
+	temp byte flag_bit = 0;
+
+	while( in_ref < in_end )
+	{
+		temp const byte ref best = 0;
+		temp const byte ref scan = 0;
+		temp const byte ref section = in_ref - LZSS_SECTION;
+		temp const n4 max_length = n4_min( in_end - in_ref, LZSS_LOOKAHEAD );
+		temp n1 best_length = 0;
+
+		if( section < in_bytes )
+		{
+			section = in_bytes;
+		}
+
+		scan = section;
+		while( scan < in_ref )
+		{
+			temp n1 length = 0;
+			while( length < max_length and scan[ length ] is in_ref[ length ] )
+			{
+				++length;
+			}
+			//
+			if( length >= LZSS_MIN_MATCH and ( length > best_length or ( length is best_length and in_ref - scan < in_ref - best ) ) )
+			{
+				best_length = length;
+				best = scan;
+			}
+			++scan;
+		}
+
+		if( best_length >= LZSS_MIN_MATCH and best_length < LZSS_LOOKAHEAD and in_ref + 1 < in_end )
+		{
+			temp n1 next_length = 0;
+			temp const n4 next_max = n4_min( in_end - in_ref - 1, LZSS_LOOKAHEAD );
+
+			scan = section;
+			while( scan <= in_ref )
+			{
+				temp n1 length = 0;
+				while( length < next_max and scan[ length ] is in_ref[ length + 1 ] )
+				{
+					++length;
+				}
+				//
+				if( length > next_length )
+				{
+					next_length = length;
+				}
+				++scan;
+			}
+
+			if( next_length > best_length + 1 )
+			{
+				val_of( out_ref++ ) = val_of( in_ref++ );
+				jump update_flags;
+			}
+		}
+
+		if( best_length >= LZSS_MIN_MATCH )
+		{
+			temp const n2 offset = in_ref - best - 1;
+			flags |= 1 << flag_bit;
+			val_of( out_ref++ ) = offset;
+			val_of( out_ref++ ) = ( ( offset >> 8 ) & 0xf ) | ( ( best_length - LZSS_MIN_MATCH ) << 4 );
+			in_ref += best_length;
+		}
+		else
+		{
+			val_of( out_ref++ ) = val_of( in_ref++ );
+		}
+
+		update_flags:
+		{
+			if( ++flag_bit is 8 )
+			{
+				val_of( flag_ref ) = flags;
+				flags = 0;
+				flag_bit = 0;
+				flag_ref = out_ref++;
+			}
+		}
+	}
+
+	if( flag_bit isnt 0 )
+	{
+		val_of( flag_ref ) = flags;
+		out out_ref - out_bytes;
+	}
+	else
+	{
+		out out_ref - out_bytes - 1;
+	}
+}
+
+embed n4 bytes_uncompress( const byte const_ref in_bytes, const n2 bytes_size, byte const_ref out_bytes )
+{
+	temp const byte ref in_ref = in_bytes;
+	temp const byte const_ref in_end = in_ref + bytes_size;
+	temp byte ref out_ref = out_bytes;
+
+	while( in_ref < in_end )
+	{
+		temp const n1 flags = val_of( in_ref++ );
+		temp n1 bit = 0;
+
+		while( bit < 8 and in_ref < in_end )
+		{
+			if( flags & ( 1 << bit++ ) )
+			{
+				skip_if( in_ref + 1 >= in_end );
+				temp n1 length = ( n1( in_ref[ 1 ] ) >> 4 ) + LZSS_MIN_MATCH;
+				temp const byte ref in_copy = out_ref - ( n1( val_of( in_ref ) ) | ( ( in_ref[ 1 ] & 0xf ) << 8 ) ) - 1;
+				in_ref += 2;
+				while( length-- )
+				{
+					val_of( out_ref++ ) = val_of( in_copy++ );
+				}
+			}
+			else
+			{
+				val_of( out_ref++ ) = val_of( in_ref++ );
+			}
+		}
+	}
+
+	out out_ref - out_bytes;
+}
 
 ///////
 
@@ -1378,7 +1523,7 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ PATH_MAX_SIZE ],
 		do
 		{
 			next_if( entry.cFileName[ 0 ] is '.' );
-			temp flag is_dir = flag( entry.dwFileAttributes &FILE_ATTRIBUTE_DIRECTORY );
+			temp flag is_dir = flag( entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY );
 			if( type is entry_any or ( type is entry_folders and is_dir is yes ) or ( type is entry_files and is_dir is no ) )
 			{
 				bytes_copy( entry.cFileName, bytes_measure( entry.cFileName ), entries[ count++ ] );
@@ -1420,7 +1565,7 @@ embed flag folder_exists( const byte const_ref path )
 		out( stat( path, ref_of( st ) ) is 0 and S_ISDIR( st.st_mode ) );
 	#elif OS_WINDOWS
 		DWORD attrib = GetFileAttributesA( path );
-		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib &FILE_ATTRIBUTE_DIRECTORY ) );
+		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
 	#endif
 }
 
@@ -1431,7 +1576,7 @@ embed flag file_exists( const byte const_ref path )
 		out( stat( path, ref_of( st ) ) is 0 and S_ISREG( st.st_mode ) );
 	#elif OS_WINDOWS
 		DWORD attrib = GetFileAttributesA( path );
-		out( attrib isnt INVALID_FILE_ATTRIBUTES and not ( attrib &FILE_ATTRIBUTE_DIRECTORY ) );
+		out( attrib isnt INVALID_FILE_ATTRIBUTES and not ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
 	#endif
 }
 
@@ -1948,7 +2093,7 @@ DECLARE_TYPE_MULTI( i8 );
 DECLARE_TYPE_MULTI( r8 );
 DECLARE_TYPE_MULTI_R( 8 );
 
-#define AREA( x2 ) ( x2.w * x2.h )
+#define x2_area( x2 ) ( x2.w * x2.h )
 
 //
 
