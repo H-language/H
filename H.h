@@ -458,6 +458,16 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 
 #define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
 
+#define bytes_add( BYTES, BYTE ) val_of( BYTES++ ) = BYTE
+
+#define bytes_add_bytes( DST, SRC, SIZE )\
+	START_DEF\
+	{\
+		temp n1 _i = 0;\
+		while( _i < ( SIZE ) ) val_of( DST++ ) = ( SRC )[ _i++ ];\
+	}\
+	END_DEF
+
 ///////
 
 #define variant struct
@@ -799,7 +809,7 @@ FUNCTION_GROUP_R( 8 );
 #define LZSS_LOOKAHEAD 17
 #define LZSS_MIN_MATCH 2
 
-embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byte const_ref out_bytes )
+embed n8 bytes_compress( const byte const_ref in_bytes, const n8 bytes_size, byte const_ref out_bytes )
 {
 	temp const byte ref in_ref = in_bytes;
 	temp const byte const_ref in_end = in_ref + bytes_size;
@@ -813,7 +823,7 @@ embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byt
 		temp const byte ref best = 0;
 		temp const byte ref scan = 0;
 		temp const byte ref section = in_ref - LZSS_SECTION;
-		temp const n4 max_length = n4_min( in_end - in_ref, LZSS_LOOKAHEAD );
+		temp const n8 max_length = n4_min( in_end - in_ref, LZSS_LOOKAHEAD );
 		temp n1 best_length = 0;
 
 		if( section < in_bytes )
@@ -841,7 +851,7 @@ embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byt
 		if( best_length >= LZSS_MIN_MATCH and best_length < LZSS_LOOKAHEAD and in_ref + 1 < in_end )
 		{
 			temp n1 next_length = 0;
-			temp const n4 next_max = n4_min( in_end - in_ref - 1, LZSS_LOOKAHEAD );
+			temp const n8 next_max = n8_min( in_end - in_ref - 1, LZSS_LOOKAHEAD );
 
 			scan = section;
 			while( scan <= in_ref )
@@ -868,7 +878,7 @@ embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byt
 
 		if( best_length >= LZSS_MIN_MATCH )
 		{
-			temp const n2 offset = in_ref - best - 1;
+			temp const n4 offset = in_ref - best - 1;
 			flags |= 1 << flag_bit;
 			val_of( out_ref++ ) = offset;
 			val_of( out_ref++ ) = ( ( offset >> 8 ) & 0xf ) | ( ( best_length - LZSS_MIN_MATCH ) << 4 );
@@ -902,7 +912,7 @@ embed n4 bytes_compress( const byte const_ref in_bytes, const n2 bytes_size, byt
 	}
 }
 
-embed n4 bytes_uncompress( const byte const_ref in_bytes, const n2 bytes_size, byte const_ref out_bytes )
+embed n8 bytes_uncompress( const byte const_ref in_bytes, const n2 bytes_size, byte const_ref out_bytes )
 {
 	temp const byte ref in_ref = in_bytes;
 	temp const byte const_ref in_end = in_ref + bytes_size;
@@ -1060,6 +1070,253 @@ embed byte ref get_terminal_input()
 
 #define is_letter( BYTE ) ( ( ( n4( BYTE ) | 0x20 ) - 'a' ) < 26 )
 #define is_number( BYTE ) ( ( n4( BYTE ) - '0' ) < 10 )
+
+///////
+
+#define _BYTES_ADD_BUFFER( BYTES )\
+	byte buffer[ BYTES ];\
+	byte ref p = buffer + BYTES
+
+#define _BYTES_ADD_NEGATIVE( DST, VAL )\
+	if( VAL < 0 )\
+	{\
+		VAL = -VAL;\
+		bytes_add( DST, '-' );\
+	}
+
+#define _BYTES_ADD_N( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 size = 0;\
+		do\
+		{\
+			val_of(--p) = ( VAL % 10 ) + '0';\
+			VAL /= 10;\
+			++size;\
+		}\
+		while( VAL > 0 );\
+		bytes_add_bytes( DST, p, size );\
+	}\
+	END_DEF
+
+#define _BYTES_ADD_I( DST, VAL )\
+	START_DEF\
+	{\
+		_BYTES_ADD_NEGATIVE( DST, VAL );\
+		_BYTES_ADD_N( DST, VAL );\
+	}\
+	END_DEF
+
+#define bytes_add_n1( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 3 );\
+		_BYTES_ADD_N( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_n2( DST, VAL )\
+	START_DEF\
+	{\
+		temp n2 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 5 );\
+		_BYTES_ADD_N( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_n4( DST, VAL )\
+	START_DEF\
+	{\
+		temp n4 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 10 );\
+		_BYTES_ADD_N( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_n8( DST, VAL )\
+	START_DEF\
+	{\
+		temp n8 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 20 );\
+		_BYTES_ADD_N( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_i1( DST, VAL )\
+	START_DEF\
+	{\
+		temp i1 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 4 );\
+		_BYTES_ADD_I( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_i2( DST, VAL )\
+	START_DEF\
+	{\
+		temp i2 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 6 );\
+		_BYTES_ADD_I( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_i4( DST, VAL )\
+	START_DEF\
+	{\
+		temp i4 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 11 );\
+		_BYTES_ADD_I( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_i8( DST, VAL )\
+	START_DEF\
+	{\
+		temp i8 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 21 );\
+		_BYTES_ADD_I( DST, _val );\
+	}\
+	END_DEF
+
+#define _BYTES_ADD_R( DST, VAL, N )\
+	START_DEF\
+	{\
+		temp i##N int_part = to( i##N, VAL );\
+		temp r##N frac_part = VAL - int_part;\
+		_BYTES_ADD_N( DST, int_part );\
+		bytes_add( DST, '.' );\
+		iter( i, N )\
+		{\
+			frac_part *= 10;\
+			temp const n1 digit = ( n1 ) frac_part;\
+			bytes_add( DST, '0' + digit );\
+			frac_part -= digit;\
+		}\
+	}\
+	END_DEF
+
+#define bytes_add_r4( DST, VAL )\
+	START_DEF\
+	{\
+		temp r4 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 32 );\
+		_BYTES_ADD_NEGATIVE( DST, _val );\
+		_BYTES_ADD_R( DST, _val, 4 );\
+	}\
+	END_DEF
+
+#define bytes_add_r8( DST, VAL )\
+	START_DEF\
+	{\
+		temp r8 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 64 );\
+		_BYTES_ADD_NEGATIVE( DST, _val );\
+		_BYTES_ADD_R( DST, _val, 8 );\
+	}\
+	END_DEF
+
+#define _BYTES_ADD_OCTAL( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 size = 0;\
+		do\
+		{\
+			* --p = ( VAL & 7 ) + '0';\
+			VAL >>= 3;\
+			++size;\
+		}\
+		while( VAL > 0 );\
+		bytes_add_bytes( DST, p, size );\
+	}\
+	END_DEF
+
+#define bytes_add_octal_n1( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 3 );\
+		_BYTES_ADD_OCTAL( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_octal_n2( DST, VAL )\
+	START_DEF\
+	{\
+		temp n2 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 6 );\
+		_BYTES_ADD_OCTAL( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_octal_n4( DST, VAL )\
+	START_DEF\
+	{\
+		temp n4 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 11 );\
+		_BYTES_ADD_OCTAL( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_octal_n8( DST, VAL )\
+	START_DEF\
+	{\
+		temp n8 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 22 );\
+		_BYTES_ADD_OCTAL( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_hex_impl( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 size = 0;\
+		do\
+		{\
+			val_of(--p) = "0123456789ABCDEF"[ VAL & 0xF ];\
+			VAL >>= 4;\
+			++size;\
+		}\
+		while( VAL > 0 );\
+		bytes_add_bytes( DST, p, size );\
+	}\
+	END_DEF
+
+#define bytes_add_hex_n1( DST, VAL )\
+	START_DEF\
+	{\
+		temp n1 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 2 );\
+		bytes_add_hex_impl( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_hex_n2( DST, VAL )\
+	START_DEF\
+	{\
+		temp n2 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 4 );\
+		bytes_add_hex_impl( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_hex_n4( DST, VAL )\
+	START_DEF\
+	{\
+		temp n4 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 8 );\
+		bytes_add_hex_impl( DST, _val );\
+	}\
+	END_DEF
+
+#define bytes_add_hex_n8( DST, VAL )\
+	START_DEF\
+	{\
+		temp n8 _val = ( VAL );\
+		_BYTES_ADD_BUFFER( 16 );\
+		bytes_add_hex_impl( DST, _val );\
+	}\
+	END_DEF
 
 ///////
 
