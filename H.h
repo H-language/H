@@ -1090,7 +1090,7 @@ embed byte ref get_terminal_input()
 		temp n1 size = 0;\
 		do\
 		{\
-			val_of(--p) = ( VAL % 10 ) + '0';\
+			val_of( --p ) = ( VAL % 10 ) + '0';\
 			VAL /= 10;\
 			++size;\
 		}\
@@ -1273,7 +1273,7 @@ embed byte ref get_terminal_input()
 		temp n1 size = 0;\
 		do\
 		{\
-			val_of(--p) = "0123456789ABCDEF"[ VAL & 0xF ];\
+			val_of( --p ) = "0123456789ABCDEF"[ VAL & 0xF ];\
 			VAL >>= 4;\
 			++size;\
 		}\
