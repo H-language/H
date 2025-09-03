@@ -31,6 +31,7 @@
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
 		#include <X11/extensions/Xrender.h>
+		#include <X11/extensions/Xpresent.h>
 		#include <X11/XKBlib.h>
 	#endif
 	//
@@ -169,26 +170,30 @@
 
 ///////
 
-#define _CHAIN_0( L, R, MID, ARGS... ) ARGS
-#define _CHAIN_1( L, R, MID, ARG ) L ARG R
-#define _CHAIN_JOIN( L, R, MID, ARG, NEXT ) _CHAIN_1( L, R, MID, ARG ) MID NEXT
-#define _CHAIN_2( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_1( L, R, MID, ARGS ) )
-#define _CHAIN_3( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_2( L, R, MID, ARGS ) )
-#define _CHAIN_4( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_3( L, R, MID, ARGS ) )
-#define _CHAIN_5( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_4( L, R, MID, ARGS ) )
-#define _CHAIN_6( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_5( L, R, MID, ARGS ) )
-#define _CHAIN_7( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_6( L, R, MID, ARGS ) )
-#define _CHAIN_8( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_7( L, R, MID, ARGS ) )
-#define _CHAIN_9( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_8( L, R, MID, ARGS ) )
-#define _CHAIN_10( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_9( L, R, MID, ARGS ) )
-#define _CHAIN_11( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_10( L, R, MID, ARGS ) )
-#define _CHAIN_12( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_11( L, R, MID, ARGS ) )
-#define _CHAIN_13( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_12( L, R, MID, ARGS ) )
-#define _CHAIN_14( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_13( L, R, MID, ARGS ) )
-#define _CHAIN_15( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_14( L, R, MID, ARGS ) )
-#define _CHAIN_16( L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( L, R, MID, ARG, _CHAIN_15( L, R, MID, ARGS ) )
-#define _CHAIN_MAKE( COUNT, L, R, MID, ARGS... ) JOIN( _CHAIN_, COUNT ) ( L, R, MID, ARGS )
-#define CHAIN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), L, R, MID, ARGS )
+#define _CHAIN_0( MODE, L, R, MID, ARGS... ) ARGS
+#define _CHAIN_1_EMPTY( L, R, MID, ARG ) L ARG R
+#define _CHAIN_1_PAREN( L, R, MID, ARG ) ( L ARG R )
+#define _CHAIN_1( MODE, L, R, MID, ARG ) _CHAIN_1_##MODE( L, R, MID, ARG )
+#define _CHAIN_JOIN( MODE, L, R, MID, ARG, NEXT ) _CHAIN_1( MODE, L, R, MID, ARG ) MID NEXT
+#define _CHAIN_2( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_1( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_3( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_2( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_4( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_3( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_5( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_4( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_6( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_5( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_7( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_6( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_8( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_7( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_9( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_8( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_10( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_9( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_11( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_10( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_12( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_11( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_13( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_12( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_14( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_13( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_15( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_14( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_16( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_15( MODE, L, R, MID, ARGS ) )
+#define _CHAIN_MAKE( COUNT, MODE, L, R, MID, ARGS... ) JOIN( _CHAIN_, COUNT ) ( MODE, L, R, MID, ARGS )
+
+#define CHAIN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), EMPTY, L, R, MID, ARGS )
+#define CHAIN_PAREN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), PAREN, L, R, MID, ARGS )
 
 ///////
 
@@ -200,7 +205,7 @@
 #define const_ref ref const
 #define temp register
 #define perm static
-#define global /*explicitly global*/
+#define global perm
 
 ///////
 
@@ -223,7 +228,7 @@ type_from( _Bool ) flag;
 #define flag( ARGS... ) to( flag, !! ( ARGS ) )
 #define yes 1
 #define no 0
-#define flip( FLAG ) FLAG = not FLAG
+#define flip( FLAG ) FLAG ^= 1
 //
 #define not !
 #define and &&
@@ -276,6 +281,9 @@ type_from( _Bool ) flag;
 
 #define range( POS_NAME, FROM, TO ) range_step( POS_NAME, FROM, TO, 1 )
 
+#define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO )\
+	range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
+
 #define iter_step( POS_NAME, SIZE, STEP )\
 	_range_step( POS_NAME, 0, SIZE, STEP, <, __COUNTER__ )
 #define iter( POS_NAME, SIZE ) _range_step( POS_NAME, 0, SIZE, 1, <, __COUNTER__ )
@@ -291,20 +299,20 @@ type_from( _Bool ) flag;
 #define if_nothing( ARG... ) if( ARG is nothing )
 #define if_something( ARG... ) if( ARG isnt nothing )
 //
-#define any( ARGS... ) ( CHAIN(,, or, ARGS ) )
-#define all( ARGS... ) ( CHAIN(,, and, ARGS ) )
-#define none( ARGS... ) ( not( any( ARGS ) ) )
+#define any( ARGS... ) ( CHAIN_PAREN(,, or, ARGS ) )
+#define all( ARGS... ) ( CHAIN_PAREN(,, and, ARGS ) )
+#define none( ARGS... ) ( not any( ARGS ) )
 #define not_all( ARGS... ) ( not all( ARGS ) )
 //
-#define if_any( ARGS... ) if( any( ARGS ) )
-#define if_all( ARGS... ) if( all( ARGS ) )
-#define if_none( ARGS... ) if( none( ARGS ) )
-#define if_not_all( ARGS... ) if( not_all( ARGS ) )
+#define if_any( ARGS... ) if any( ARGS )
+#define if_all( ARGS... ) if all( ARGS )
+#define if_none( ARGS... ) if none( ARGS )
+#define if_not_all( ARGS... ) if not_all( ARGS )
 //
-#define while_any( ARGS... ) while( any( ARGS ) )
-#define while_all( ARGS... ) while( all( ARGS ) )
-#define while_none( ARGS... ) while( none( ARGS ) )
-#define while_not_all( ARGS... ) while( not_all( ARGS ) )
+#define while_any( ARGS... ) while any( ARGS )
+#define while_all( ARGS... ) while all( ARGS )
+#define while_none( ARGS... ) while none( ARGS )
+#define while_not_all( ARGS... ) while not_all( ARGS )
 //
 #define skip_if( ARG... ) if( ARG ) skip
 #define skip_if_nothing( ARG... ) if_nothing( ARG ) skip
@@ -406,11 +414,11 @@ type_from( i4 ) out_state;
 
 ///////
 
-#define n_to_bits( N ) pick( ( N ) <= 2, 1, pick( ( N ) <= 4, 2, pick( ( N ) <= 8, 3, pick( ( N ) <= 16, 4, pick( ( N ) <= 32, 5, pick( ( N ) <= 64, 6, pick( ( N ) <= 128, 7, pick( ( N ) <= 256, 8, 9 ) ) ) ) ) ) ) )
+#define n_to_bits( N ) pick( ( N ) <= 1, 1, ( 32 - __builtin_clz( ( N ) - 1 ) ) )
 
 ///////
 
-#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( size_of( TYPE ), DEFAULT( 1, AMOUNT ) ) )
+#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
 #define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
 
 #define delete_ref free
@@ -445,9 +453,9 @@ type_from( i4 ) out_state;
 
 #define bytes_end( BYTES ) val_of( BYTES ) = '\0'
 
-embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size_t new_count )
+embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size_t new_count )
 {
-	temp anon ref new_ptr = realloc( r, type_size * new_count );
+	temp anon const_ref new_ptr = realloc( r, type_size * new_count );
 	if( new_ptr isnt nothing and new_count > old_count )
 	{
 		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
@@ -469,6 +477,8 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 	END_DEF
 
 ///////
+
+#define packed __attribute__( ( packed ) )
 
 #define variant struct
 
@@ -513,17 +523,17 @@ embed anon ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size
 
 ///////
 
-#define MIN( A, B ) pick( ( A ) < ( B ), A, B )
+#define MIN( A, B ) pick( ( A ) < ( B ), ( A ), ( B ) )
 #define MIN3( A, B, C ) MIN( A, MIN( B, C ) )
 #define MIN4( A, B, C, D ) MIN3( A, B, MIN( C, D ) )
 #define MIN5( A, B, C, D, E ) MIN4( A, B, C, MIN( D, E ) )
 
-#define MAX( A, B ) pick( ( A ) > ( B ), A, B )
+#define MAX( A, B ) pick( ( A ) > ( B ), ( A ), ( B ) )
 #define MAX3( A, B, C ) MAX( A, MAX( B, C ) )
 #define MAX4( A, B, C, D ) MAX3( A, B, MAX( C, D ) )
 #define MAX5( A, B, C, D, E ) MAX4( A, B, C, MAX( D, E ) )
 
-#define MEDIAN( A, B, C ) pick( ( A ) > ( B ), pick( ( B ) > ( C ), B, MIN( A, C ) ), pick( ( A ) > ( C ), A, MIN( B, C ) ) )
+#define MEDIAN( A, B, C ) pick( ( A ) > ( B ), pick( ( B ) > ( C ), ( B ), MIN( A, C ) ), pick( ( A ) > ( C ), ( A ), MIN( B, C ) ) )
 #define MEDIAN4( A, B, C, D ) ( ( ( MIN( MAX( A, B ), MAX( C, D ) ) + MAX( MIN( A, B ), MIN( C, D ) ) ) ) / 2 )
 #define MEDIAN4_BITWISE( A, B, C, D ) ( ( ( MIN( MAX( A, B ), MAX( C, D ) ) + MAX( MIN( A, B ), MIN( C, D ) ) ) ) >> 1 )
 #define MEDIAN5( A, B, C, D, E ) ( ( A + B + C + D + E - MIN5( A, B, C, D, E ) - MAX5( A, B, C, D, E ) ) / 3 )
@@ -1267,7 +1277,7 @@ embed byte ref get_terminal_input()
 	}\
 	END_DEF
 
-#define bytes_add_hex_impl( DST, VAL )\
+#define _BYTES_ADD_HEX( DST, VAL )\
 	START_DEF\
 	{\
 		temp n1 size = 0;\
@@ -1287,7 +1297,7 @@ embed byte ref get_terminal_input()
 	{\
 		temp n1 _val = ( VAL );\
 		_BYTES_ADD_BUFFER( 2 );\
-		bytes_add_hex_impl( DST, _val );\
+		_BYTES_ADD_HEX( DST, _val );\
 	}\
 	END_DEF
 
@@ -1296,7 +1306,7 @@ embed byte ref get_terminal_input()
 	{\
 		temp n2 _val = ( VAL );\
 		_BYTES_ADD_BUFFER( 4 );\
-		bytes_add_hex_impl( DST, _val );\
+		_BYTES_ADD_HEX( DST, _val );\
 	}\
 	END_DEF
 
@@ -1305,7 +1315,7 @@ embed byte ref get_terminal_input()
 	{\
 		temp n4 _val = ( VAL );\
 		_BYTES_ADD_BUFFER( 8 );\
-		bytes_add_hex_impl( DST, _val );\
+		_BYTES_ADD_HEX( DST, _val );\
 	}\
 	END_DEF
 
@@ -1314,7 +1324,7 @@ embed byte ref get_terminal_input()
 	{\
 		temp n8 _val = ( VAL );\
 		_BYTES_ADD_BUFFER( 16 );\
-		bytes_add_hex_impl( DST, _val );\
+		_BYTES_ADD_HEX( DST, _val );\
 	}\
 	END_DEF
 
@@ -2046,33 +2056,37 @@ embed byte ref get_exe_path()
 
 type_from( n8 ) nano;
 
-embed nano get_nano()
+embed nano _get_nano()
 {
 	#if OS_WINDOWS
-		static LARGE_INTEGER frequency;
-		static LARGE_INTEGER start;
-		static int initialized = 0;
+		perm LARGE_INTEGER frequency;
+		perm LARGE_INTEGER start;
 		LARGE_INTEGER current;
 
-		if( !initialized )
+		once
 		{
 			QueryPerformanceFrequency( ref_of( frequency ) );
 			QueryPerformanceCounter( ref_of( start ) );
-			initialized = 1;
 		}
 
 		QueryPerformanceCounter( ref_of( current ) );
 
-		n8 elapsed = current.QuadPart - start.QuadPart;
-		n8 nanoseconds = ( elapsed * 1000000000ULL ) / frequency.QuadPart;
-
-		out nanoseconds;
-
+		out( ( current.QuadPart - start.QuadPart ) * 1000000000ULL ) / frequency.QuadPart;
 	#else
 		struct timespec ts;
 		clock_gettime( CLOCK_MONOTONIC, ref_of( ts ) );
 		out to( nano, ts.tv_sec * nano_per_sec + ts.tv_nsec );
 	#endif
+}
+
+embed nano get_nano()
+{
+	perm nano epoch = 0;
+	once
+	{
+		epoch = _get_nano();
+	}
+	out _get_nano() - epoch;
 }
 
 fn nano_sleep( const nano time )
