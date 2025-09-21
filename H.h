@@ -17,6 +17,11 @@
 	#undef OS_LINUX
 	#define OS_LINUX 1
 	#define OS_NAME "Linux"
+	#if __BYTE_ORDER == __LITTLE_ENDIAN
+		#define IS_BIG_ENDIAN 0
+	#elif __BYTE_ORDER == __BIG_ENDIAN
+		#define IS_BIG_ENDIAN 1
+	#endif
 	#define _GNU_SOURCE
 	#include <sys/stat.h>
 	#include <sys/mman.h>
@@ -39,6 +44,7 @@
 	#undef OS_WINDOWS
 	#define OS_WINDOWS 1
 	#define OS_NAME "Windows"
+	#define IS_BIG_ENDIAN 0
 	#undef UNICODE
 	#define WIN32_LEAN_AND_MEAN
 	#define NOMINMAX
@@ -49,6 +55,7 @@
 	#undef OS_MACOS
 	#define OS_MACOS 1
 	#define OS_NAME "macOS"
+	#define IS_BIG_ENDIAN 0
 	//
 #else
 	#undef OS_UNKNOWN
@@ -207,6 +214,12 @@
 #define perm static
 #define global perm
 
+#if OS_LINUX
+	#define cache_align __attribute__( ( aligned( 64 ) ) )
+#else
+	#define cache_align __declspec( align( 64 ) )
+#endif
+
 ///////
 
 #define type_from( TYPE... ) typedef TYPE
@@ -274,22 +287,23 @@ type_from( _Bool ) flag;
 
 ///////
 
-#define _range_step( POS_NAME, FROM, TO, STEP, SYMBOL, COUNTER )\
-	for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL( i8( TO ) ); POS_NAME += i8( STEP ) )
-#define range_step( POS_NAME, FROM, TO, STEP )\
-	_range_step( POS_NAME, FROM, TO, STEP, <=, __COUNTER__ )
+#define _range( POS_NAME, FROM, TO, STEP, SYMBOL, DIR ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL( i8( TO ) ); POS_NAME DIR i8( STEP ) )
+
+#define range_step( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, <=, += )
+#define range_step_inv( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, >=, -= )
 
 #define range( POS_NAME, FROM, TO ) range_step( POS_NAME, FROM, TO, 1 )
+#define range_inv( POS_NAME, FROM, TO ) range_step_inv( POS_NAME, FROM, TO, 1 )
 
-#define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO )\
-	range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
+#define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO ) range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
 
-#define iter_step( POS_NAME, SIZE, STEP )\
-	_range_step( POS_NAME, 0, SIZE, STEP, <, __COUNTER__ )
-#define iter( POS_NAME, SIZE ) _range_step( POS_NAME, 0, SIZE, 1, <, __COUNTER__ )
+#define iter_step( POS_NAME, SIZE, STEP ) _range( POS_NAME, 0, SIZE, STEP, <, += )
+#define iter_step_inv( POS_NAME, SIZE, STEP ) _range( POS_NAME, SIZE, 0, STEP, >, -= )
 
-#define iter_grid( X_NAME, Y_NAME, WIDTH, HEIGHT )\
-	iter( Y_NAME, HEIGHT ) iter( X_NAME, WIDTH )
+#define iter( POS_NAME, SIZE ) _range( POS_NAME, 0, SIZE, 1, <, += )
+#define iter_inv( POS_NAME, SIZE ) _range( POS_NAME, SIZE, 0, 1, >, -= )
+
+#define iter_grid( X_NAME, Y_NAME, WIDTH, HEIGHT ) iter( Y_NAME, HEIGHT ) iter( X_NAME, WIDTH )
 
 #define _repeat( N_TIMES, COUNTER ) iter( JOIN( _REP_, COUNTER ), N_TIMES )
 #define repeat( N_TIMES ) _repeat( N_TIMES, __COUNTER__ )
@@ -493,6 +507,8 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 #define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn; )
 #define object_fn( OBJECT, FN, ARGS... )\
 	fn OBJECT##_##FN( const OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
+#define new_object_fn( OBJECT, ARGS... )\
+	embed OBJECT new_##OBJECT( ARGS )
 
 #define call( OBJECT, FN ) if_something( OBJECT->FN ) OBJECT->FN( OBJECT )
 
@@ -2724,7 +2740,7 @@ type( thread )
 	thread_fn function;
 };
 
-embed thread _new_cpu_thread( thread_fn function, anon ref ref_param )
+embed thread _start_thread( thread_fn function, anon ref ref_param )
 {
 	thread out_thread;
 	out_thread.function = function;
@@ -2737,7 +2753,7 @@ embed thread _new_cpu_thread( thread_fn function, anon ref ref_param )
 
 	out out_thread;
 }
-#define new_cpu_thread( FN, REF_PARAM ) _new_cpu_thread( to( thread_fn, FN ), to( anon ref, REF_PARAM ) )
+#define start_thread( FN, REF_PARAM ) _start_thread( to( thread_fn, FN ), to( anon ref, REF_PARAM ) )
 
 #if OS_LINUX
 	#define wait_for_thread( THREAD ) pthread_join( THREAD.id, nothing )
