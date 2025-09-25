@@ -28,11 +28,11 @@
 	#include <dirent.h>
 	#include <time.h>
 	#include <fcntl.h>
-	#include <pthread.h>
 	#include <unistd.h>
-	#include <alsa/asoundlib.h>
 	#define SEPARATOR "/"
 	#ifdef C7H16
+		#include <pthread.h>
+		#include <alsa/asoundlib.h>
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
 		#include <X11/extensions/Xrender.h>
