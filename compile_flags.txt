@@ -1,0 +1,3 @@
+-Wno-pragma-pack
+--target=x86_64-w64-mingw32
+-I..\..\tools\tinygw\x86_64-w64-mingw32\include

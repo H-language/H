@@ -459,8 +459,9 @@ type_from( i4 ) out_state;
 #define bytes_paste_move( FROM_REF, TO_REF )\
 	START_DEF\
 	{\
-		temp const n2 _PASTE_SIZE = bytes_measure( FROM_REF );\
-		bytes_copy_move( FROM_REF, _PASTE_SIZE, TO_REF );\
+		temp const byte const_ref _FROM_REF = FROM_REF;\
+		temp const n2 _PASTE_SIZE = bytes_measure( _FROM_REF );\
+		bytes_copy_move( _FROM_REF, _PASTE_SIZE, TO_REF );\
 	}\
 	END_DEF
 
@@ -530,7 +531,7 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 ///////
 
 #define declare_bytes( NAME, SIZE, OPTIONAL_BYTES... )\
-	byte NAME[ SIZE ] PASTE_IF_ARGS( =, OPTIONAL_BYTES ) DEFAULT(, OPTIONAL_BYTES );\
+	perm byte NAME[ SIZE ] PASTE_IF_ARGS( =, OPTIONAL_BYTES ) DEFAULT(, OPTIONAL_BYTES );\
 	byte ref NAME##_ref = NAME PASTE_IF_ARGS( + size_of_bytes( DEFAULT( "", OPTIONAL_BYTES ) ), OPTIONAL_BYTES )
 
 ///////
@@ -539,6 +540,7 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 #define print_size( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
 
 #define newline "\n"
+#define newline_byte '\n'
 #define print_newline() print_size( newline, 1 )
 
 ///////
@@ -1037,63 +1039,47 @@ embed n8 bytes_uncompress( const byte const_ref in_bytes, const n2 bytes_size, b
 
 //
 
-#define terminal_set_format( FORMAT ) print_size( format_##FORMAT, size_of( format_##FORMAT ) )
+#define print_set_format( FORMAT ) print_size( format_##FORMAT, size_of( format_##FORMAT ) )
 //
-#define terminal_set_rgb( R, G, B ) print( format_rgb( R, G, B ) )
-#define terminal_set_color( COLOR ) terminal_set_format( COLOR )
-#define terminal_set_dark_color( COLOR ) terminal_set_format( dark_##COLOR )
-#define terminal_unset_color() terminal_set_format( color_default )
-#define terminal_set_bg_rgb( R, G, B ) print( format_bg_rgb( R, G, B ) )
-#define terminal_set_bg_color( COLOR ) terminal_set_format( bg_##COLOR )
-#define terminal_set_bg_dark_color( COLOR ) terminal_set_format( bg_dark_##COLOR )
-#define terminal_unset_bg_color() terminal_set_format( bg_default )
+#define print_set_rgb( R, G, B ) print( format_rgb( R, G, B ) )
+#define print_set_color( COLOR ) print_set_format( COLOR )
+#define print_set_dark_color( COLOR ) print_set_format( dark_##COLOR )
+#define print_unset_color() print_set_format( color_default )
+#define print_set_bg_rgb( R, G, B ) print( format_bg_rgb( R, G, B ) )
+#define print_set_bg_color( COLOR ) print_set_format( bg_##COLOR )
+#define print_set_bg_dark_color( COLOR ) print_set_format( bg_dark_##COLOR )
+#define print_unset_bg_color() print_set_format( bg_default )
 //
-#define terminal_set_bold() terminal_set_format( bold )
-#define terminal_set_dim() terminal_set_format( dim )
-#define terminal_set_italic() terminal_set_format( italic )
-#define terminal_set_underline() terminal_set_format( underline )
-#define terminal_set_blink() terminal_set_format( blink )
-#define terminal_set_reverse() terminal_set_format( reverse )
-#define terminal_set_hidden() terminal_set_format( hidden )
-#define terminal_set_strikethrough() terminal_set_format( strikethrough )
+#define print_set_bold() print_set_format( bold )
+#define print_set_dim() print_set_format( dim )
+#define print_set_italic() print_set_format( italic )
+#define print_set_underline() print_set_format( underline )
+#define print_set_blink() print_set_format( blink )
+#define print_set_reverse() print_set_format( reverse )
+#define print_set_hidden() print_set_format( hidden )
+#define print_set_strikethrough() print_set_format( strikethrough )
 //
-#define terminal_unset_bold() terminal_set_format( no_bold )
-#define terminal_unset_italic() terminal_set_format( no_italic )
-#define terminal_unset_underline() terminal_set_format( no_underline )
-#define terminal_unset_blink() terminal_set_format( no_blink )
-#define terminal_unset_reverse() terminal_set_format( no_reverse )
-#define terminal_unset_hidden() terminal_set_format( no_hidden )
-#define terminal_unset_strikethrough() terminal_set_format( no_strikethrough )
+#define print_unset_bold() print_set_format( no_bold )
+#define print_unset_italic() print_set_format( no_italic )
+#define print_unset_underline() print_set_format( no_underline )
+#define print_unset_blink() print_set_format( no_blink )
+#define print_unset_reverse() print_set_format( no_reverse )
+#define print_unset_hidden() print_set_format( no_hidden )
+#define print_unset_strikethrough() print_set_format( no_strikethrough )
 //
-#define terminal_reset_format() terminal_set_format( reset )
+#define print_reset_format() print_set_format( reset )
+
+#define print_clear() system( PICK( OS_WINDOWS, "cls", "clear" ) )
 
 //
 
-group( terminal_color, n2 )
+embed const byte const_ref get_print_input()
 {
-	terminal_white,
-	terminal_red,
-	terminal_yellow,
-	terminal_green,
-	terminal_cyan,
-	terminal_blue,
-	terminal_magenta,
-	terminal_gray,
-	terminal_dark_red,
-	terminal_dark_yellow,
-	terminal_dark_green,
-	terminal_dark_cyan,
-	terminal_dark_blue,
-	terminal_dark_magenta,
-};
-
-#define terminal_clear() system( PICK( OS_WINDOWS, "cls", "clear" ) )
-
-embed byte ref get_terminal_input()
-{
-	perm byte terminal_input[ KB( 1 ) ] = "";
-	fgets( terminal_input, size_of_bytes( terminal_input ), stdin );
-	out terminal_input;
+	perm byte print_input[ KB( 1 ) ];
+	fgets( print_input, size_of_bytes( print_input ), stdin );
+	temp const n2 input_size = bytes_measure(print_input) - 1;
+	print_input[input_size] = '\0';
+	out print_input;
 }
 
 ///////
@@ -1759,7 +1745,7 @@ fn format_print( const byte const_ref format_bytes, ... )
 
 ///////
 
-#define PATH_MAX_SIZE 260
+#define max_path_size 260
 
 ///////
 
@@ -1771,11 +1757,11 @@ group( entry_type )
 	entry_any
 };
 
-embed n2 get_entries( const byte const_ref dir, byte entries[][ PATH_MAX_SIZE ], const n2 max_entries, const entry_type type )
+embed n2 get_entries( const byte const_ref dir, byte entries[][ max_path_size ], const n2 max_entries, const entry_type type )
 {
 	temp n2 count = 0;
 	temp n2 len = bytes_measure( dir );
-	byte path[ PATH_MAX_SIZE ];
+	byte path[ max_path_size ];
 	anon ref handle;
 	bytes_copy( dir, len, path );
 
@@ -1880,14 +1866,14 @@ embed flag file_exists( const byte const_ref path )
 fn path_up_folder( byte const_ref path )
 {
 	temp byte ref p = path + bytes_measure( path );
-	while( p > path and val_of( --p ) isnt val_of( SEPARATOR ) );
+	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
 	if( p > path ) val_of( p ) = '\0';
 }
 
 embed const byte const_ref path_get_name( const byte const_ref path )
 {
 	temp const byte ref p = path + bytes_measure( path );
-	while( p > path and val_of( --p ) isnt val_of( SEPARATOR ) );
+	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
 	if( p > path ) ++p;
 	out p;
 }
@@ -1898,7 +1884,7 @@ type_from( FILE ref ) os_file_handle;
 
 type( file )
 {
-	byte path[ PATH_MAX_SIZE ];
+	byte path[ max_path_size ];
 	n2 path_size;
 	os_file_handle handle;
 	byte ref mapped_bytes;
@@ -2061,11 +2047,11 @@ fn delete_file( const char const_ref path )
 
 embed byte ref get_exe_path()
 {
-	perm byte exe_path[ PATH_MAX_SIZE ] = "";
+	perm byte exe_path[ max_path_size ] = "";
 	#if OS_LINUX
-		temp i8 _s = readlink( "/proc/self/exe", exe_path, PATH_MAX_SIZE );
+		temp i8 _s = readlink( "/proc/self/exe", exe_path, max_path_size );
 	#elif OS_WINDOWS
-		GetModuleFileNameA( nothing, exe_path, PATH_MAX_SIZE );
+		GetModuleFileNameA( nothing, exe_path, max_path_size );
 	#endif
 	out exe_path;
 }
@@ -2795,7 +2781,7 @@ type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
 
 ///////
 
-#define _main_fn out_state main( const i4 inputs_count, const byte const_ref const_ref inputs_bytes )
+#define _main_fn out_state main( const i4 parameters_count, const byte const_ref const_ref parameters )
 #define start _main_fn
 
 /////// /////// /////// /////// /////// /////// ////////
