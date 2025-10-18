@@ -288,7 +288,7 @@ type_from( _Bool ) flag;
 
 ///////
 
-#define _range( POS_NAME, FROM, TO, STEP, SYMBOL, DIR ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL( i8( TO ) ); POS_NAME DIR i8( STEP ) )
+#define _range( POS_NAME, FROM, TO, STEP, SYMBOL_COMPARE, SYMBOL_STEP ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL_COMPARE i8( TO ); POS_NAME SYMBOL_STEP i8( STEP ) )
 
 #define range_step( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, <=, += )
 #define range_step_inv( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, >=, -= )
@@ -467,7 +467,7 @@ type_from( i4 ) out_state;
 
 #define bytes_set_move( BYTE, TO_REF ) val_of( TO_REF++ ) = BYTE
 
-#define bytes_newline_move( TO_REF ) bytes_set_move( val_of(newline), TO_REF )
+#define bytes_newline_move( TO_REF ) bytes_set_move( val_of( newline ), TO_REF )
 
 #define bytes_end( BYTES ) val_of( BYTES ) = '\0'
 
@@ -538,6 +538,7 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 
 #define print( BYTES ) fputs( BYTES, stdout )
 #define print_size( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
+#define print_show() fflush( stdout )
 
 #define newline "\n"
 #define newline_byte '\n'
@@ -1077,8 +1078,8 @@ embed const byte const_ref get_print_input()
 {
 	perm byte print_input[ KB( 1 ) ];
 	fgets( print_input, size_of_bytes( print_input ), stdin );
-	temp const n2 input_size = bytes_measure(print_input) - 1;
-	print_input[input_size] = '\0';
+	temp const n2 input_size = bytes_measure( print_input ) - 1;
+	print_input[ input_size ] = '\0';
 	out print_input;
 }
 
@@ -1746,6 +1747,7 @@ fn format_print( const byte const_ref format_bytes, ... )
 ///////
 
 #define max_path_size 260
+#define max_entry_size 65
 
 ///////
 
@@ -1757,18 +1759,19 @@ group( entry_type )
 	entry_any
 };
 
-embed n2 get_entries( const byte const_ref dir, byte entries[][ max_path_size ], const n2 max_entries, const entry_type type )
+embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path_size ], const n2 max_entries, const entry_type type, const flag folder_separator )
 {
 	temp n2 count = 0;
-	temp n2 len = bytes_measure( dir );
-	byte path[ max_path_size ];
+	temp n2 len = bytes_measure( folder_path );
+	perm byte path[ max_path_size ];
+	bytes_clear(path, max_path_size);
 	anon ref handle;
-	bytes_copy( dir, len, path );
+	bytes_copy( folder_path, len, path );
 
 	#if OS_LINUX
 		struct dirent ref entry;
 		struct stat stat_buf;
-		handle = opendir( dir );
+		handle = opendir( path );
 		if_nothing( handle ) out 0;
 		path[ len++ ] = '/';
 		while( ( entry = readdir( handle ) ) and count < max_entries )
@@ -1783,7 +1786,7 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ max_path_size ],
 				if( type is entry_any or ( type is entry_folders and is_dir is yes ) or ( type is entry_files and is_dir is no ) )
 				{
 					bytes_copy( entry->d_name, entry_size, entries[ count ] );
-					if( is_dir )
+					if( is_dir and folder_separator )
 					{
 						entries[ count ][ entry_size - 1 ] = val_of( SEPARATOR );
 						entries[ count ][ entry_size ] = '\0';
@@ -1805,7 +1808,13 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ max_path_size ],
 			temp flag is_dir = flag( entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY );
 			if( type is entry_any or ( type is entry_folders and is_dir is yes ) or ( type is entry_files and is_dir is no ) )
 			{
-				bytes_copy( entry.cFileName, bytes_measure( entry.cFileName ), entries[ count++ ] );
+				temp n2 entry_size = bytes_measure( entry.cFileName ) + 1;
+				bytes_copy( entry.cFileName, entry_size, entries[ count++ ] );
+				if( is_dir and folder_separator )
+				{
+					entries[ count ][ entry_size - 1 ] = val_of( SEPARATOR );
+					entries[ count ][ entry_size ] = '\0';
+				}
 			}
 		}
 		while( count < max_entries and FindNextFile( handle, ref_of( entry ) ) );
@@ -1814,8 +1823,8 @@ embed n2 get_entries( const byte const_ref dir, byte entries[][ max_path_size ],
 	out count;
 }
 
-#define get_files( DIR, OUT_ENTRIES, MAX_ENTRIES ) get_entries( DIR, OUT_ENTRIES, MAX_ENTRIES, entry_files )
-#define get_folders( DIR, OUT_ENTRIES, MAX_ENTRIES ) get_entries( DIR, OUT_ENTRIES, MAX_ENTRIES, entry_folders )
+#define get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
+#define get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR) )
 
 ///////
 
