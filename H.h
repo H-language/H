@@ -30,7 +30,6 @@
 	#include <fcntl.h>
 	#include <pthread.h>
 	#include <unistd.h>
-	#define SEPARATOR "/"
 	#ifdef C7H16
 		#include <alsa/asoundlib.h>
 		#include <X11/Xlib.h>
@@ -49,7 +48,6 @@
 	#define WIN32_LEAN_AND_MEAN
 	#define NOMINMAX
 	#include <windows.h>
-	#define SEPARATOR "\\"
 	//
 #elif defined( __APPLE__ )
 	#undef OS_MACOS
@@ -467,7 +465,8 @@ type_from( i4 ) out_state;
 
 #define bytes_set_move( BYTE, TO_REF ) val_of( TO_REF++ ) = BYTE
 
-#define bytes_newline_move( TO_REF ) bytes_set_move( val_of( newline ), TO_REF )
+#define bytes_newline_move( TO_REF ) bytes_set_move( newline_byte, TO_REF )
+#define bytes_separator_move( TO_REF ) bytes_set_move( separator_byte, TO_REF )
 
 #define bytes_end( BYTES ) val_of( BYTES ) = '\0'
 
@@ -530,18 +529,16 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 
 ///////
 
-#define declare_bytes( NAME, SIZE, OPTIONAL_BYTES... )\
-	perm byte NAME[ SIZE ] PASTE_IF_ARGS( =, OPTIONAL_BYTES ) DEFAULT(, OPTIONAL_BYTES );\
-	byte ref NAME##_ref = NAME PASTE_IF_ARGS( + size_of_bytes( DEFAULT( "", OPTIONAL_BYTES ) ), OPTIONAL_BYTES )
-
-///////
-
 #define print( BYTES ) fputs( BYTES, stdout )
 #define print_size( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
 #define print_show() fflush( stdout )
 
 #define newline "\n"
 #define newline_byte '\n'
+
+#define separator PICK( OS_LINUX, "/", "\\" )
+#define separator_byte PICK( OS_LINUX, '/', '\\' )
+
 #define print_newline() print_size( newline, 1 )
 
 ///////
@@ -1378,7 +1375,7 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 					{
 						if( val_of( format_bytes + 2 ) is '>' )
 						{
-							bytes_paste_move( SEPARATOR, out_bytes );
+							bytes_paste_move( separator, out_bytes );
 							format_bytes += 3;
 							skip;
 						}
@@ -1392,14 +1389,7 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 					{
 						if( val_of( format_bytes + 2 ) is '>' )
 						{
-							if( is_disable )
-							{
-								bytes_paste_move( format_no_underline, out_bytes );
-							}
-							else
-							{
-								bytes_paste_move( format_underline, out_bytes );
-							}
+							bytes_paste_move( pick( is_disable, format_no_underline, format_underline ), out_bytes );
 							format_bytes += 3;
 							skip;
 						}
@@ -1413,14 +1403,7 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 					{
 						if( val_of( format_bytes + 2 ) is '>' )
 						{
-							if( is_disable )
-							{
-								bytes_paste_move( format_no_italic, out_bytes );
-							}
-							else
-							{
-								bytes_paste_move( format_italic, out_bytes );
-							}
+							bytes_paste_move( pick( is_disable, format_no_italic, format_italic ), out_bytes );
 							format_bytes += 3;
 							skip;
 						}
@@ -1434,14 +1417,7 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 					{
 						if( val_of( format_bytes + 2 ) is '>' )
 						{
-							if( is_disable )
-							{
-								bytes_paste_move( format_no_bold, out_bytes );
-							}
-							else
-							{
-								bytes_paste_move( format_bold, out_bytes );
-							}
+							bytes_paste_move( pick( is_disable, format_no_bold, format_bold ), out_bytes );
 							format_bytes += 3;
 							skip;
 						}
@@ -1459,14 +1435,7 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 						{
 							if( val_of( format_bytes + 2 ) is '>' )
 							{
-								if( is_bg is yes )
-								{
-									bytes_paste_move( format_bg_default, out_bytes );
-								}
-								else
-								{
-									bytes_paste_move( format_color_default, out_bytes );
-								}
+								bytes_paste_move( pick( is_bg is yes, format_bg_default, format_color_default ), out_bytes );
 								format_bytes += 3;
 								skip;
 							}
@@ -1502,190 +1471,43 @@ embed n4 _format_bytes( byte ref out_bytes, const byte ref format_bytes, arg_lis
 									//
 									when( 'w' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_gray, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_white, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_gray, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_white, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_gray, format_bg_white ), pick( is_dark is yes, format_gray, format_white ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'r' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_red, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_red, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_red, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_red, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_red, format_bg_red ), pick( is_dark is yes, format_dark_red, format_red ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'y' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_yellow, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_yellow, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_yellow, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_yellow, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_yellow, format_bg_yellow ), pick( is_dark is yes, format_dark_yellow, format_yellow ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'g' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_green, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_green, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_green, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_green, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_green, format_bg_green ), pick( is_dark is yes, format_dark_green, format_green ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'c' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_cyan, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_cyan, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_cyan, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_cyan, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_cyan, format_bg_cyan ), pick( is_dark is yes, format_dark_cyan, format_cyan ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'b' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_blue, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_blue, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_blue, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_blue, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_blue, format_bg_blue ), pick( is_dark is yes, format_dark_blue, format_blue ) ), out_bytes );
 										skip;
 									}
 									//
 									when( 'm' )
 									{
-										if( is_bg is yes )
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_bg_dark_magenta, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_bg_magenta, out_bytes );
-											}
-										}
-										else
-										{
-											if( is_dark is yes )
-											{
-												bytes_paste_move( format_dark_magenta, out_bytes );
-											}
-											else
-											{
-												bytes_paste_move( format_magenta, out_bytes );
-											}
-										}
+										bytes_paste_move( pick( is_bg is yes, pick( is_dark is yes, format_bg_dark_magenta, format_bg_magenta ), pick( is_dark is yes, format_dark_magenta, format_magenta ) ), out_bytes );
 										skip;
 									}
 								}
@@ -1740,7 +1562,8 @@ fn format_print( const byte const_ref format_bytes, ... )
 {
 	arg_list args;
 	args_init( args, format_bytes );
-	declare_bytes( format, KB( 2 ) );
+	perm byte format[ KB( 2 ) ];
+	temp byte ref format_ref = format;
 	print_size( format, _format_bytes( format_ref, format_bytes, args ) );
 }
 
@@ -1764,7 +1587,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 	temp n2 count = 0;
 	temp n2 len = bytes_measure( folder_path );
 	perm byte path[ max_path_size ];
-	bytes_clear(path, max_path_size);
+	bytes_clear( path, max_path_size );
 	anon ref handle;
 	bytes_copy( folder_path, len, path );
 
@@ -1788,7 +1611,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 					bytes_copy( entry->d_name, entry_size, entries[ count ] );
 					if( is_dir and folder_separator )
 					{
-						entries[ count ][ entry_size - 1 ] = val_of( SEPARATOR );
+						entries[ count ][ entry_size - 1 ] = val_of( separator );
 						entries[ count ][ entry_size ] = '\0';
 					}
 					++count;
@@ -1812,7 +1635,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 				bytes_copy( entry.cFileName, entry_size, entries[ count++ ] );
 				if( is_dir and folder_separator )
 				{
-					entries[ count ][ entry_size - 1 ] = val_of( SEPARATOR );
+					entries[ count ][ entry_size - 1 ] = val_of( separator );
 					entries[ count ][ entry_size ] = '\0';
 				}
 			}
@@ -1824,7 +1647,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 }
 
 #define get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
-#define get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR) )
+#define get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
 
 ///////
 
@@ -1870,7 +1693,7 @@ embed flag file_exists( const byte const_ref path )
 
 ///////
 
-#define path( FOLDERS... ) CHAIN(,, SEPARATOR, FOLDERS )
+#define path( FOLDERS... ) CHAIN(,, separator, FOLDERS )
 
 fn path_up_folder( byte const_ref path )
 {

@@ -1,8 +1,11 @@
-linux
+all
+	-I../../libraries/H
+
+Linux
 	-lm
 	-lpthread
 
-windows
+Windows
 	-luser32
 
 example
