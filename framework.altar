@@ -1,0 +1,20 @@
+libraries
+	H
+
+Linux
+	-lm
+	-lpthread
+
+Windows
+	-luser32
+
+example
+`
+#include <H.h>
+
+start
+{
+	print( "hello H!" newline );
+	out success;
+}
+`
