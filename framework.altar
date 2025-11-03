@@ -1,5 +1,5 @@
-libraries
-	H
+repo
+	H-language/H
 
 Linux
 	-lm
