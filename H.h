@@ -61,7 +61,7 @@
 		#include <X11/extensions/Xpresent.h>
 		#include <X11/XKBlib.h>
 	#endif
-	
+
 #elif defined( _WIN32 )
 	#undef OS_WINDOWS
 	#define OS_WINDOWS 1
@@ -71,13 +71,13 @@
 	#define WIN32_LEAN_AND_MEAN
 	#define NOMINMAX
 	#include <windows.h>
-	
+
 #elif defined( __APPLE__ )
 	#undef OS_MACOS
 	#define OS_MACOS 1
 	#define OS_NAME "macOS"
 	#define IS_BIG_ENDIAN 0
-	
+
 #else
 	#undef OS_UNKNOWN
 	#define OS_UNKNOWN 1
@@ -97,22 +97,22 @@
 	#undef COMPILER_CLANG
 	#define COMPILER_CLANG 1
 	#define COMPILER_NAME "Clang"
-	
+
 #elif defined( __TINYC__ )
 	#undef COMPILER_TCC
 	#define COMPILER_TCC 1
 	#define COMPILER_NAME "TCC"
-	
+
 #elif defined( __GNUC__ )
 	#undef COMPILER_GCC
 	#define COMPILER_GCC 1
 	#define COMPILER_NAME "GCC"
-	
+
 #elif defined( _MSC_VER )
 	#undef COMPILER_MSVC
 	#define COMPILER_MSVC 1
 	#define COMPILER_NAME "MSVC"
-	
+
 #else
 	#undef COMPILER_UNKNOWN
 	#define COMPILER_UNKNOWN 1
@@ -1397,7 +1397,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 			next_if( entry->d_name[ 0 ] is '.' );
 			temp n2 entry_size = bytes_measure( entry->d_name ) + 1;
 			bytes_copy( path + len, entry->d_name, entry_size );
-			
+
 			if( stat( path, ref_of( stat_buf ) ) is 0 )
 			{
 				temp flag is_dir = flag( S_ISDIR( stat_buf.st_mode ) );
@@ -1419,7 +1419,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 		bytes_copy( path + len, "\\*", 3 );
 		handle = FindFirstFile( path, ref_of( entry ) );
 		if( handle is INVALID_HANDLE_VALUE ) out 0;
-		
+
 		do
 		{
 			next_if( entry.cFileName[ 0 ] is '.' );
@@ -1518,16 +1518,16 @@ embed file _open_file_loading( const byte const_ref path, const n4 path_size )
 	{
 		out f;
 	}
-	
+
 	f.handle = fopen( path, "rb" );
 	if_nothing( f.handle )
 	{
 		out f;
 	}
-	
+
 	f.path_size = path_size;
 	bytes_copy( f.path, path, f.path_size );
-	
+
 	out f;
 }
 
@@ -1539,11 +1539,11 @@ embed file _open_file_saving( const byte const_ref path, const n4 path_size )
 	{
 		out f;
 	}
-	
+
 	f.size = 0;
 	f.path_size = path_size;
 	bytes_copy( f.path, path, f.path_size );
-	
+
 	out f;
 }
 
@@ -1553,17 +1553,17 @@ embed file _open_file_saving( const byte const_ref path, const n4 path_size )
 embed file _map_file( const byte const_ref path, const n4 path_size )
 {
 	file f = { 0 };
-	
+
 	f.size = get_file_size( path );
 	if( f.size is 0 )
 	{
 		out f;
 	}
-	
+
 	#if OS_LINUX
 		temp i4 fd = open( path, O_RDONLY );
 		out_if( fd is -1 ) f;
-		
+
 		temp anon ref mapped_bytes = mmap( nothing, f.size, PROT_READ, MAP_PRIVATE, fd, 0 );
 		close( fd );
 		out_if( mapped_bytes is MAP_FAILED ) f;
@@ -1571,21 +1571,21 @@ embed file _map_file( const byte const_ref path, const n4 path_size )
 	#elif OS_WINDOWS
 		temp HANDLE file = CreateFileA( path, GENERIC_READ, FILE_SHARE_READ, nothing, OPEN_EXISTING, 0, nothing );
 		out_if( file is INVALID_HANDLE_VALUE ) f;
-		
+
 		temp HANDLE mapping = CreateFileMapping( file, nothing, PAGE_READONLY, 0, 0, nothing );
 		CloseHandle( file );
 		if_nothing( mapping )
 		{
 			out f;
 		}
-		
+
 		f.mapped_bytes = to( byte ref, MapViewOfFile( mapping, FILE_MAP_READ, 0, 0, 0 ) );
 		CloseHandle( mapping );
 	#endif
-	
+
 	f.path_size = path_size;
 	bytes_copy( f.path, path, f.path_size );
-	
+
 	out f;
 }
 #define map_file( PATH, PATH_SIZE... ) _map_file( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
@@ -1593,7 +1593,7 @@ embed file _map_file( const byte const_ref path, const n4 path_size )
 fn file_load( file ref f, byte const_ref out_bytes )
 {
 	if_nothing( f->handle ) out;
-	
+
 	fseek( f->handle, 0, SEEK_SET );
 	fread( out_bytes, 1, f->size, f->handle );
 }
@@ -1601,7 +1601,7 @@ fn file_load( file ref f, byte const_ref out_bytes )
 fn file_save( file ref f, const byte const_ref bytes, const n8 size )
 {
 	if_nothing( f->handle ) out;
-	
+
 	fseek( f->handle, 0, SEEK_SET );
 	f->size = size;
 	fwrite( bytes, 1, f->size, f->handle );
@@ -1622,7 +1622,7 @@ fn file_close( file ref f )
 	{
 		fclose( f->handle );
 	}
-	
+
 	file_clear( f );
 }
 
@@ -1636,7 +1636,7 @@ fn file_unmap( file ref f )
 			UnmapViewOfFile( f->mapped_bytes );
 		#endif
 	}
-	
+
 	file_clear( f );
 }
 
