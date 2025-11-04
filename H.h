@@ -555,7 +555,7 @@ type_from( i4 ) out_state;
 #define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
 #define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
 #define bytes_measure( REF ) strlen( REF )
-#define bytes_end( BYTES ) val_of( BYTES ) = '\0'
+#define bytes_end( BYTES ) val_of( BYTES ) = eof_byte
 
 ////////
 // auto-move variations
@@ -864,8 +864,15 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 #define separator PICK( OS_LINUX, "/", "\\" )
 #define separator_byte PICK( OS_LINUX, '/', '\\' )
 
+#define tab "\t"
+#define tab_byte '\t'
+
+#define eof "\0"
+#define eof_byte '\0'
+
 #define print_newline() print_size( newline, 1 )
 #define print_separator() print_size( separator, 1 )
+#define print_tab() print_size( tab, 1 )
 
 ////////
 // formats
@@ -1320,7 +1327,7 @@ embed const byte const_ref get_os_input()
 	os_file_get_line( print_input, size_of_bytes( print_input ), stdin );
 	temp const n2 input_size = bytes_measure( print_input );
 	out_if( input_size is 0 ) nothing;
-	print_input[ input_size - 1 ] = '\0';
+	print_input[ input_size - 1 ] = eof_byte;
 	out print_input;
 }
 
@@ -1335,7 +1342,7 @@ fn path_up_folder( byte const_ref path )
 {
 	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
-	if( p > path ) val_of( p ) = '\0';
+	if( p > path ) val_of( p ) = eof_byte;
 }
 
 embed const byte const_ref path_get_name( const byte const_ref path )
@@ -1400,7 +1407,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 					if( is_dir and folder_separator )
 					{
 						entries[ count ][ entry_size - 1 ] = val_of( separator );
-						entries[ count ][ entry_size ] = '\0';
+						entries[ count ][ entry_size ] = eof_byte;
 					}
 					++count;
 				}
@@ -1424,7 +1431,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 				if( is_dir and folder_separator )
 				{
 					entries[ count ][ entry_size - 1 ] = val_of( separator );
-					entries[ count ][ entry_size ] = '\0';
+					entries[ count ][ entry_size ] = eof_byte;
 				}
 			}
 		}
