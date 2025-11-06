@@ -1345,10 +1345,18 @@ fn path_up_folder( byte const_ref path )
 	if( p > path ) val_of( p ) = eof_byte;
 }
 
-embed const byte const_ref path_get_name( const byte const_ref path )
+embed byte const_ref path_get_name( const byte const_ref path )
 {
 	temp const byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
+	if( p > path ) ++p;
+	out p;
+}
+
+embed byte const_ref path_get_extension( const byte const_ref path )
+{
+	temp const byte ref p = path + bytes_measure( path );
+	while( p > path and val_of( --p ) isnt '.' );
 	if( p > path ) ++p;
 	out p;
 }
