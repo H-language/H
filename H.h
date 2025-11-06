@@ -54,7 +54,7 @@
 	#include <pthread.h>
 	#include <unistd.h>
 	#ifdef C7H16
-		#include <alsa/asoundlib.h>
+		//#include <alsa/asoundlib.h>
 		#include <X11/Xlib.h>
 		#include <X11/Xutil.h>
 		#include <X11/extensions/Xrender.h>
