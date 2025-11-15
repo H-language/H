@@ -1171,6 +1171,7 @@ FUNCTION_GROUP_R( 4 );
 #define r4_round roundf
 #define r4_mod fmodf
 #define r4_sqrt sqrtf
+#define r4_sincos sincosf
 #define r4_sin sinf
 #define r4_cos cosf
 #define r4_tan tanf
@@ -1188,6 +1189,7 @@ FUNCTION_GROUP_R( 8 );
 #define r8_ceil ceil
 #define r8_mod fmod
 #define r8_sqrt sqrt
+#define r8_sincos sincos
 #define r8_sin sin
 #define r8_cos cos
 #define r8_tan tan
@@ -1195,6 +1197,20 @@ FUNCTION_GROUP_R( 8 );
 #define r8_acos acos
 #define r8_atan atan
 #define r8_atanyx atan2
+
+#if COMPILER_TCC
+	fn sincosf( const r4 x, const r4 ref sin_x, const r4 ref cos_x )
+	{
+		val_of( sin_x ) = r4_sin( x );
+		val_of( cos_x ) = r4_cos( x );
+	}
+
+	fn sincos( const r8 x, const r8 ref sin_x, const r8 ref cos_x )
+	{
+		val_of( sin_x ) = r8_sin( x );
+		val_of( cos_x ) = r8_cos( x );
+	}
+#endif
 
 ////////////////////////////////
 /// time
