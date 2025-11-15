@@ -422,6 +422,7 @@ type_from( _Bool ) flag;
 #define call( OBJECT, FN ) if_something( OBJECT->FN ) OBJECT->FN( OBJECT )
 
 #define new_object( OBJECT ) new_ref( type_of_ref( OBJECT ) )
+#define delete_object( OBJECT ) delete_ref( OBJECT )
 
 ////////
 // fusion
@@ -1000,21 +1001,10 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 #define ABS( V ) pick( ( V ) < 0, -( V ), V )
 #define SIGN( V ) pick( ( V ) >= 0, 1, -1 )
 #define SIGN_ZERO( V ) pick( ( V ) > 0, 1, pick( ( V ) < 0, -1, 0 ) )
-#define SNAP( V, MULTIPLES_OF ) ( ( V ) / ( MULTIPLES_OF ) ) * ( MULTIPLES_OF )
-#define SNAP_r( N, V, MULTIPLES_OF ) r##N##_trunc( ( V ) / ( MULTIPLES_OF ) ) * ( MULTIPLES_OF )
-#define SNAP_BIT( V, BIT ) ( ( ( V ) >> ( BIT ) ) << ( BIT ) )
 
 #define MIX( A, B, AMOUNT ) ( ( A ) + ( AMOUNT ) * ( ( B ) - ( A ) ) )
 #define MAP( V, A, B, C, D ) ( ( V ) - ( A ) ) * ( ( D ) - ( C ) ) / ( ( B ) - ( A ) ) + ( C )
 #define RANGE( V, LOWER, UPPER ) ( ( V - ( LOWER ) ) / ( ( UPPER ) - ( LOWER ) ) )
-
-#define TRUNC_r( N, ... ) r##N( i##N( __VA_ARGS__ ) )
-#define FLOOR_r( N, ... ) pick( __VA_ARGS__ >= 0, TRUNC_r( N, __VA_ARGS__ ), r##N( i##N( __VA_ARGS__ ) - 1 ) )
-#define ROUND_r( N, ... ) TRUNC_r( N, __VA_ARGS__ + pick( __VA_ARGS__ >= 0, 0.5, -0.5 ) )
-#define CEIL_r( N, ... ) pick( __VA_ARGS__ > 0, r##N( i##N( __VA_ARGS__ ) + 1 ), TRUNC_r( N, __VA_ARGS__ ) )
-#define MOD_r( N, V, MODULO ) ( ( V ) - ( MODULO ) * r##N##_floor( ( V ) / ( MODULO ) ) )
-
-#define SMOOTH( V ) pick( ( V ) <= 0., 0, pick( ( V ) >= 1., 1, ( V ) * ( V ) * ( 3 - 2 * ( V ) ) ) )
 
 ////////
 // math functions
@@ -1094,14 +1084,6 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 	{\
 		out AVG4_BITWISE( a, b, c, d );\
 	}\
-	embed T##N T##N##_snap( const T##N v, const T##N multiples_of )\
-	{\
-		out SNAP( v, multiples_of );\
-	}\
-	embed T##N T##N##_snap_bit( const T##N v, const T##N b )\
-	{\
-		out SNAP_BIT( v, b );\
-	}\
 	embed T##N T##N##_random()\
 	{\
 		out T##N( rand() );\
@@ -1137,26 +1119,6 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 #define FUNCTION_GROUP_R( N )\
 	FUNCTION_GROUP_BASE( r, N );\
 	FUNCTION_GROUP_BASE_IR( r, N );\
-	embed r##N r##N##_trunc( const r##N v )\
-	{\
-		out TRUNC_r( N, v );\
-	}\
-	embed r##N r##N##_floor( const r##N v )\
-	{\
-		out FLOOR_r( N, v );\
-	}\
-	embed r##N r##N##_round( const r##N v )\
-	{\
-		out ROUND_r( N, v );\
-	}\
-	embed r##N r##N##_ceil( const r##N v )\
-	{\
-		out CEIL_r( N, v );\
-	}\
-	embed r##N r##N##_mod( const r##N v, const r##N m )\
-	{\
-		out MOD_r( N, v, m );\
-	}\
 	embed r##N r##N##_median4( const r##N a, const r##N b, const r##N c, const r##N d )\
 	{\
 		out MEDIAN4( a, b, c, d );\
@@ -1169,10 +1131,6 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 	{\
 		out AVG4( a, b, c, d );\
 	}\
-	embed r##N r##N##_snap( const r##N v, const r##N multiples_of )\
-	{\
-		out SNAP_r( N, v, multiples_of );\
-	}\
 	embed r##N r##N##_mix( const r##N a, const r##N b, const r##N amount )\
 	{\
 		out MIX( a, b, amount );\
@@ -1184,10 +1142,6 @@ embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count
 	embed r##N r##N##_range( const r##N v, const r##N lower, const r##N upper )\
 	{\
 		out RANGE( v, lower, upper );\
-	}\
-	embed r##N r##N##_smooth( const r##N v )\
-	{\
-		out SMOOTH( v );\
 	}\
 	embed r##N r##N##_random()\
 	{\
@@ -1211,6 +1165,11 @@ FUNCTION_GROUP_I( 2 );
 FUNCTION_GROUP_N( 4 );
 FUNCTION_GROUP_I( 4 );
 FUNCTION_GROUP_R( 4 );
+#define r4_trunc truncf
+#define r4_floor floorf
+#define r4_ceil ceilf
+#define r4_round roundf
+#define r4_mod fmodf
 #define r4_sqrt sqrtf
 #define r4_sin sinf
 #define r4_cos cosf
@@ -1223,6 +1182,11 @@ FUNCTION_GROUP_R( 4 );
 FUNCTION_GROUP_N( 8 );
 FUNCTION_GROUP_I( 8 );
 FUNCTION_GROUP_R( 8 );
+#define r8_round round
+#define r8_trunc trunc
+#define r8_floor floor
+#define r8_ceil ceil
+#define r8_mod fmod
 #define r8_sqrt sqrt
 #define r8_sin sin
 #define r8_cos cos
@@ -1345,17 +1309,17 @@ fn path_up_folder( byte const_ref path )
 	if( p > path ) val_of( p ) = eof_byte;
 }
 
-embed byte const_ref path_get_name( const byte const_ref path )
+embed byte const_ref path_get_name( byte const_ref path )
 {
-	temp const byte ref p = path + bytes_measure( path );
+	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
 	if( p > path ) ++p;
 	out p;
 }
 
-embed byte const_ref path_get_extension( const byte const_ref path )
+embed byte const_ref path_get_extension( byte const_ref path )
 {
-	temp const byte ref p = path + bytes_measure( path );
+	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '.' );
 	if( p > path ) ++p;
 	out p;
