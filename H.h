@@ -263,7 +263,7 @@
 #define out return
 
 #define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
-#define fn_type( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULTS( ( anon ), OUTPUT ),, ARG_TYPES ) ) )
+#define fn_type( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
 
 ////////////////////////////////
 /// flags
@@ -394,51 +394,6 @@ type_from( _Bool ) flag;
 #define out_if_not_all( ARGS... ) if_not_all( ARGS ) out
 
 ////////////////////////////////
-/// new declarations
-
-#define packed __attribute__( ( packed ) )
-#define variant struct
-
-////////
-// type
-
-#define _type_make( NAME, REF, EXTRA... )\
-	type_from( variant NAME REF ) NAME;\
-	EXTRA;\
-	variant NAME
-#define type( NAME ) _type_make( NAME, )
-
-#define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
-
-////////
-// object
-
-#define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn; )
-#define object_fn( OBJECT, FN, ARGS... )\
-	fn OBJECT##_##FN( const OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
-#define new_object_fn( OBJECT, ARGS... )\
-	embed OBJECT new_##OBJECT( ARGS )
-
-#define call( OBJECT, FN ) if_something( OBJECT->FN ) OBJECT->FN( OBJECT )
-
-#define new_object( OBJECT ) new_ref( type_of_ref( OBJECT ) )
-#define delete_object( OBJECT ) delete_ref( OBJECT )
-
-////////
-// fusion
-
-#define fusion( NAME )\
-	type_from( union NAME ) NAME;\
-	union NAME
-
-////////
-// group
-
-#define group( NAME, TYPE... )\
-	type_from( DEFAULT( byte, TYPE ) ) NAME;\
-	enum NAME
-
-////////////////////////////////
 /// value types
 
 type_from( char ) byte;
@@ -457,34 +412,34 @@ type_from( char ) byte;
 type_from( unsigned char ) n1;
 #define n1( VAL ) to( n1, VAL )
 #define min_n1 n1( 0x00u )
-#define max_n1 n1( 0xFFu )
+#define max_n1 n1( 0xffu )
 //
 type_from( signed char ) i1;
 #define i1( VAL ) to( i1, VAL )
 #define min_i1 i1( 0x80 )
-#define max_i1 i1( 0x7F )
+#define max_i1 i1( 0x7f )
 
 // 2 bytes
 type_from( unsigned short ) n2;
 #define n2( VAL ) to( n2, VAL )
 #define min_n2 n2( 0x0000u )
-#define max_n2 n2( 0xFFFFu )
+#define max_n2 n2( 0xffffu )
 //
 type_from( signed short ) i2;
 #define i2( VAL ) to( i2, VAL )
 #define min_i2 i2( 0x8000 )
-#define max_i2 i2( 0x7FFF )
+#define max_i2 i2( 0x7fff )
 
 // 4 bytes
 type_from( unsigned int ) n4;
 #define n4( VAL ) to( n4, VAL )
 #define min_n4 n4( 0x00000000u )
-#define max_n4 n4( 0xFFFFFFFFu )
+#define max_n4 n4( 0xffffffffu )
 //
 type_from( signed int ) i4;
 #define i4( VAL ) to( i4, VAL )
 #define min_i4 i4( 0x80000000 )
-#define max_i4 i4( 0x7FFFFFFF )
+#define max_i4 i4( 0x7fffffff )
 //
 type_from( float ) r4;
 #define r4( VAL ) to( r4, VAL )
@@ -493,12 +448,12 @@ type_from( float ) r4;
 type_from( unsigned long long ) n8;
 #define n8( VAL ) to( n8, VAL )
 #define min_n8 n8( 0x0000000000000000u )
-#define max_n8 n8( 0xFFFFFFFFFFFFFFFFu )
+#define max_n8 n8( 0xffffffffffffffffu )
 //
 type_from( signed long long ) i8;
 #define i8( VAL ) to( i8, VAL )
 #define min_i8 i8( 0x8000000000000000 )
-#define max_i8 i8( 0x7FFFFFFFFFFFFFFF )
+#define max_i8 i8( 0x7fffffffffffffff )
 //
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
@@ -582,6 +537,74 @@ type_from( i4 ) out_state;
 
 #define bytes_newline_move( TO_REF ) bytes_set_move( TO_REF, newline_byte )
 #define bytes_separator_move( TO_REF ) bytes_set_move( TO_REF, separator_byte )
+
+////////////////////////////////
+/// allocated references/bytes
+
+#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
+#define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
+
+#define delete_ref free
+
+embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8 old_count, const n8 new_count )
+{
+	temp anon const_ref new_ptr = realloc( r, type_size * new_count );
+	if( new_ptr isnt nothing and new_count > old_count )
+	{
+		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
+	}
+	out new_ptr;
+}
+#define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
+
+#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
+
+////////////////////////////////
+/// new declarations
+
+#define packed __attribute__( ( packed ) )
+#define variant struct
+
+////////
+// type
+
+#define _type_make( NAME, REF, EXTRA... )\
+	type_from( variant NAME REF ) NAME;\
+	EXTRA;\
+	variant NAME
+#define type( NAME ) _type_make( NAME, )
+
+#define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
+
+////////
+// object
+
+#define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn )
+#define object_fn( OBJECT, FN, ARGS... )\
+	fn OBJECT##_##FN( const OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
+#define new_object_fn( OBJECT, ARGS... )\
+	embed OBJECT new_##OBJECT( ARGS )
+
+#define call( OBJECT, FN ) if( OBJECT isnt nothing and OBJECT->FN isnt nothing ) OBJECT->FN( OBJECT )
+
+#define type_of_object( OBJECT ) variant OBJECT
+
+#define new_object( OBJECT ) new_ref( type_of_object( OBJECT ) )
+#define delete_object( OBJECT ) delete_ref( OBJECT )
+
+////////
+// fusion
+
+#define fusion( NAME )\
+	type_from( union NAME ) NAME;\
+	union NAME
+
+////////
+// group
+
+#define group( NAME, TYPE... )\
+	type_from( DEFAULT( byte, TYPE ) ) NAME;\
+	enum NAME
 
 ////////////////////////////////
 /// byte conversion
@@ -830,27 +853,6 @@ type_from( i4 ) out_state;
 		_BYTES_ADD_HEX( TO_REF, _val );\
 	}\
 	END_DEF
-
-////////////////////////////////
-/// allocated references/bytes
-
-#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
-#define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
-
-#define delete_ref free
-
-embed anon const_ref _ref_resize( anon ref r, size_t type_size, size_t old_count, size_t new_count )
-{
-	temp anon const_ref new_ptr = realloc( r, type_size * new_count );
-	if( new_ptr isnt nothing and new_count > old_count )
-	{
-		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
-	}
-	out new_ptr;
-}
-#define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
-
-#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
 
 ////////////////////////////////
 /// terminal print
