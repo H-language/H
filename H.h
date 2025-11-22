@@ -18,6 +18,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <math.h>
 
@@ -409,51 +410,51 @@ type_from( char ) byte;
 // natural 1/2/4/8, integer 1/2/4/8, rational 4/8
 
 // 1 byte
-type_from( unsigned char ) n1;
+type_from( uint8_t ) n1;
 #define n1( VAL ) to( n1, VAL )
-#define min_n1 n1( 0x00u )
-#define max_n1 n1( 0xffu )
+#define min_n1 0
+#define max_n1 UINT8_MAX
 //
-type_from( signed char ) i1;
+type_from( int8_t ) i1;
 #define i1( VAL ) to( i1, VAL )
-#define min_i1 i1( 0x80 )
-#define max_i1 i1( 0x7f )
+#define min_i1 INT8_MIN
+#define max_i1 INT8_MAX
 
 // 2 bytes
-type_from( unsigned short ) n2;
+type_from( uint16_t ) n2;
 #define n2( VAL ) to( n2, VAL )
-#define min_n2 n2( 0x0000u )
-#define max_n2 n2( 0xffffu )
+#define min_n2 0
+#define max_n2 UINT16_MAX
 //
-type_from( signed short ) i2;
+type_from( int16_t ) i2;
 #define i2( VAL ) to( i2, VAL )
-#define min_i2 i2( 0x8000 )
-#define max_i2 i2( 0x7fff )
+#define min_i2 INT16_MIN
+#define max_i2 INT16_MAX
 
 // 4 bytes
-type_from( unsigned int ) n4;
+type_from( uint32_t ) n4;
 #define n4( VAL ) to( n4, VAL )
-#define min_n4 n4( 0x00000000u )
-#define max_n4 n4( 0xffffffffu )
+#define min_n4 0
+#define max_n4 UINT32_MAX
 //
-type_from( signed int ) i4;
+type_from( int32_t ) i4;
 #define i4( VAL ) to( i4, VAL )
-#define min_i4 i4( 0x80000000 )
-#define max_i4 i4( 0x7fffffff )
+#define min_i4 INT32_MIN
+#define max_i4 INT32_MAX
 //
 type_from( float ) r4;
 #define r4( VAL ) to( r4, VAL )
 
 // 8 bytes
-type_from( unsigned long long ) n8;
+type_from( uint64_t ) n8;
 #define n8( VAL ) to( n8, VAL )
-#define min_n8 n8( 0x0000000000000000u )
-#define max_n8 n8( 0xffffffffffffffffu )
+#define min_n8 0
+#define max_n8 UINT64_MAX
 //
-type_from( signed long long ) i8;
+type_from( int64_t ) i8;
 #define i8( VAL ) to( i8, VAL )
-#define min_i8 i8( 0x8000000000000000 )
-#define max_i8 i8( 0x7fffffffffffffff )
+#define min_i8 INT64_MIN
+#define max_i8 INT64_MAX
 //
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
@@ -1374,18 +1375,18 @@ object_fn( list, delete_part, n4 const position, n4 const delete_count )
 
 type_from( list ) text;
 
-#define new_text_bytes( BYTES, CAPACITY... ) new_list_bytes( byte, bytes_measure( BYTES ), bytes_paste( new_ref( byte, DEFAULT( bytes_measure( BYTES ) + 1, CAPACITY ) ), BYTES ), DEFAULT( 1, CAPACITY ) )
+#define new_text_bytes( BYTES, COUNT, CAPACITY... ) new_list_bytes( byte, COUNT, bytes_paste( new_ref( byte, DEFAULT( COUNT + 1, CAPACITY ) ), BYTES ), DEFAULT( 1, CAPACITY ) )
 #define new_text( CAPACITY... ) new_list( byte, DEFAULT( 1, CAPACITY ) )
 #define delete_text delete_list
 
-#define text_set( TEXT, POS, CHAR ) list_set( TEXT, POS, byte( CHAR ) )
+#define text_set( TEXT, POS, BYTE ) list_set( TEXT, POS, byte( BYTE ) )
 #define text_get( TEXT, POS ) list_get( TEXT, byte, POS )
 #define text_clear list_clear
 #define text_move list_move
 #define text_copy list_copy
 
-#define text_add( TEXT, CHAR ) list_add( TEXT, byte( CHAR ) )
-#define text_insert( TEXT, POS, CHAR ) list_insert( TEXT, POS, byte( CHAR ) )
+#define text_add( TEXT, BYTE ) list_add( TEXT, byte( BYTE ) )
+#define text_insert( TEXT, POS, BYTE ) list_insert( TEXT, POS, byte( BYTE ) )
 
 #define text_add_bytes_part list_add_bytes_part
 #define text_add_bytes list_add_bytes
