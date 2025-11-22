@@ -14,6 +14,7 @@
 ////////////////////////////////
 /// include(s)
 
+#define _GNU_SOURCE
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -45,7 +46,7 @@
 	#elif __BYTE_ORDER == __BIG_ENDIAN
 		#define IS_BIG_ENDIAN 1
 	#endif
-	#define _GNU_SOURCE
+	
 	#include <sys/stat.h>
 	#include <sys/mman.h>
 	#include <dirent.h>
@@ -240,7 +241,6 @@
 /// references/values
 
 #define ref *
-#define const_ref ref const
 
 #define type_from( TYPE... ) typedef TYPE
 #define ref_of( VAR... ) ( & ( VAR ) )
@@ -502,11 +502,17 @@ type_from( i4 ) out_state;
 #define MiB( MEBIBYTES ) ( ( MEBIBYTES ) << 20 )
 #define GiB( GIBIBYTES ) ( ( GIBIBYTES ) << 30 )
 
+#define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
+#define delete_bytes delete_ref
+#define duplicate_bytes( BYTES ) strdup( BYTES )
+
+#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
+
 #define bytes_copy( TO_REF, FROM_REF, FROM_SIZE ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
 #define bytes_copy_until( TO_REF, FROM_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
 #define bytes_copy_until_any( TO_REF, FROM_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
-#define bytes_move( TO_REF, FROM_REF, FROM_SIZE ) memmove( TO_REF, FROM_REF, FROM_SIZE )
 #define bytes_paste( TO_REF, FROM_REF ) strcpy( TO_REF, FROM_REF )
+#define bytes_move( REF, POSITION, SIZE, MOVE_AMOUNT ) memmove( ( REF ) + ( POSITION ) + ( MOVE_AMOUNT ), ( REF ) + ( POSITION ), ( SIZE ) )
 #define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
 #define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
 #define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
@@ -527,8 +533,8 @@ type_from( i4 ) out_state;
 #define bytes_paste_move( TO_REF, FROM_REF )\
 	START_DEF\
 	{\
-		temp const byte const_ref _FROM_REF = FROM_REF;\
-		temp const n2 _PASTE_SIZE = bytes_measure( _FROM_REF );\
+		temp byte const ref const _FROM_REF = FROM_REF;\
+		temp n2 const _PASTE_SIZE = bytes_measure( _FROM_REF );\
 		bytes_copy_move( TO_REF, _FROM_REF, _PASTE_SIZE );\
 	}\
 	END_DEF
@@ -542,13 +548,11 @@ type_from( i4 ) out_state;
 /// allocated references/bytes
 
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
-#define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
+#define delete_ref( REF ) if_something( REF ) free( REF )
 
-#define delete_ref free
-
-embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8 old_count, const n8 new_count )
+embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const old_count, n8 const new_count )
 {
-	temp anon const_ref new_ptr = realloc( r, type_size * new_count );
+	temp anon ref const new_ptr = realloc( r, type_size * new_count );
 	if( new_ptr isnt nothing and new_count > old_count )
 	{
 		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
@@ -556,8 +560,6 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 	out new_ptr;
 }
 #define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
-
-#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
 
 ////////////////////////////////
 /// new declarations
@@ -581,7 +583,7 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 
 #define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn )
 #define object_fn( OBJECT, FN, ARGS... )\
-	fn OBJECT##_##FN( const OBJECT this COMMA_IF_ARGS( ARGS ) ARGS )
+	fn OBJECT##_##FN( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
 #define new_object_fn( OBJECT, ARGS... )\
 	embed OBJECT new_##OBJECT( ARGS )
 
@@ -623,15 +625,15 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 #define _BYTES_ADD_N( TO_REF, VAL )\
 	START_DEF\
 	{\
-		temp n1 size = 0;\
+		temp n1 count = 0;\
 		do\
 		{\
 			val_of( --p ) = ( VAL mod 10 ) + '0';\
 			VAL /= 10;\
-			++size;\
+			++count;\
 		}\
 		while( VAL > 0 );\
-		bytes_copy_move( TO_REF, p, size );\
+		bytes_copy_move( TO_REF, p, count );\
 	}\
 	END_DEF
 
@@ -725,7 +727,7 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 		iter( i, N )\
 		{\
 			frac_part *= 10;\
-			temp const n1 digit = ( n1 ) frac_part;\
+			temp n1 const digit = ( n1 ) frac_part;\
 			bytes_set_move( TO_REF, '0' + digit );\
 			frac_part -= digit;\
 		}\
@@ -755,15 +757,15 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 #define _BYTES_ADD_OCTAL( TO_REF, VAL )\
 	START_DEF\
 	{\
-		temp n1 size = 0;\
+		temp n1 count = 0;\
 		do\
 		{\
 			val_of( --p ) = ( VAL & 7 ) + '0';\
 			VAL >>= 3;\
-			++size;\
+			++count;\
 		}\
 		while( VAL > 0 );\
-		bytes_copy_move( TO_REF, p, size );\
+		bytes_copy_move( TO_REF, p, count );\
 	}\
 	END_DEF
 
@@ -806,15 +808,15 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 #define _BYTES_ADD_HEX( TO_REF, VAL )\
 	START_DEF\
 	{\
-		temp n1 size = 0;\
+		temp n1 count = 0;\
 		do\
 		{\
 			val_of( --p ) = "0123456789ABCDEF"[ VAL & 0xF ];\
 			VAL >>= 4;\
-			++size;\
+			++count;\
 		}\
 		while( VAL > 0 );\
-		bytes_copy_move( TO_REF, p, size );\
+		bytes_copy_move( TO_REF, p, count );\
 	}\
 	END_DEF
 
@@ -858,7 +860,7 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 /// terminal print
 
 #define print( BYTES ) fputs( BYTES, stdout )
-#define print_size( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
+#define print_count( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
 #define print_show() fflush( stdout )
 
 #define newline "\n"
@@ -873,9 +875,9 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 #define eof "\0"
 #define eof_byte '\0'
 
-#define print_newline() print_size( newline, 1 )
-#define print_separator() print_size( separator, 1 )
-#define print_tab() print_size( tab, 1 )
+#define print_newline() print_count( newline, 1 )
+#define print_separator() print_count( separator, 1 )
+#define print_tab() print_count( tab, 1 )
 
 ////////
 // formats
@@ -940,7 +942,7 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 ////////
 // print format
 
-#define print_set_format( FORMAT ) print_size( format_##FORMAT, size_of( format_##FORMAT ) )
+#define print_set_format( FORMAT ) print_count( format_##FORMAT, size_of( format_##FORMAT ) )
 
 #define print_set_rgb( R, G, B ) print( format_rgb( R, G, B ) )
 #define print_set_color( COLOR ) print_set_format( COLOR )
@@ -1012,77 +1014,77 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 // math functions
 
 #define FUNCTION_GROUP_BASE( T, N )\
-	embed T##N T##N##_min( const T##N a, const T##N b )\
+	embed T##N T##N##_min( T##N const a, T##N const b )\
 	{\
 		out MIN( a, b );\
 	}\
-	embed T##N T##N##_min3( const T##N a, const T##N b, const T##N c )\
+	embed T##N T##N##_min3( T##N const a, T##N const b, T##N const c )\
 	{\
 		out MIN3( a, b, c );\
 	}\
-	embed T##N T##N##_min4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	embed T##N T##N##_min4( T##N const a, T##N const b, T##N const c, T##N const d )\
 	{\
 		out MIN4( a, b, c, d );\
 	}\
-	embed T##N T##N##_min5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	embed T##N T##N##_min5( T##N const a, T##N const b, T##N const c, T##N const d, T##N const e )\
 	{\
 		out MIN5( a, b, c, d, e );\
 	}\
-	embed T##N T##N##_max( const T##N a, const T##N b )\
+	embed T##N T##N##_max( T##N const a, T##N const b )\
 	{\
 		out MAX( a, b );\
 	}\
-	embed T##N T##N##_max3( const T##N a, const T##N b, const T##N c )\
+	embed T##N T##N##_max3( T##N const a, T##N const b, T##N const c )\
 	{\
 		out MAX3( a, b, c );\
 	}\
-	embed T##N T##N##_max4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	embed T##N T##N##_max4( T##N const a, T##N const b, T##N const c, T##N const d )\
 	{\
 		out MAX4( a, b, c, d );\
 	}\
-	embed T##N T##N##_max5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	embed T##N T##N##_max5( T##N const a, T##N const b, T##N const c, T##N const d, T##N const e )\
 	{\
 		out MAX5( a, b, c, d, e );\
 	}\
-	embed T##N T##N##_median( const T##N a, const T##N b, const T##N c )\
+	embed T##N T##N##_median( T##N const a, T##N const b, T##N const c )\
 	{\
 		out MEDIAN( a, b, c );\
 	}\
-	embed T##N T##N##_median5( const T##N a, const T##N b, const T##N c, const T##N d, const T##N e )\
+	embed T##N T##N##_median5( T##N const a, T##N const b, T##N const c, T##N const d, T##N const e )\
 	{\
 		out MEDIAN5( a, b, c, d, e );\
 	}\
-	embed T##N T##N##_avg3( const T##N a, const T##N b, const T##N c )\
+	embed T##N T##N##_avg3( T##N const a, T##N const b, T##N const c )\
 	{\
 		out AVG3( a, b, c );\
 	}\
-	embed T##N T##N##_clamp( const T##N v, const T##N min, const T##N max )\
+	embed T##N T##N##_clamp( T##N const v, T##N const min, T##N const max )\
 	{\
 		out CLAMP( v, min, max );\
 	}\
-	embed T##N T##N##_saturate( const T##N v )\
+	embed T##N T##N##_saturate( T##N const v )\
 	{\
 		out SATURATE( v );\
 	}\
-	embed T##N T##N##_sqr( const T##N v )\
+	embed T##N T##N##_sqr( T##N const v )\
 	{\
 		out SQR( v );\
 	}\
-	embed T##N T##N##_cube( const T##N v )\
+	embed T##N T##N##_cube( T##N const v )\
 	{\
 		out CUBE( v );\
 	}
 
 #define FUNCTION_GROUP_BASE_NI( T, N )\
-	embed T##N T##N##_median4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	embed T##N T##N##_median4( T##N const a, T##N const b, T##N const c, T##N const d )\
 	{\
 		out MEDIAN4_BITWISE( a, b, c, d );\
 	}\
-	embed T##N T##N##_avg( const T##N a, const T##N b )\
+	embed T##N T##N##_avg( T##N const a, T##N const b )\
 	{\
 		out AVG_BITWISE( a, b );\
 	}\
-	embed T##N T##N##_avg4( const T##N a, const T##N b, const T##N c, const T##N d )\
+	embed T##N T##N##_avg4( T##N const a, T##N const b, T##N const c, T##N const d )\
 	{\
 		out AVG4_BITWISE( a, b, c, d );\
 	}\
@@ -1090,21 +1092,21 @@ embed anon const_ref _ref_resize( anon const_ref r, const n8 type_size, const n8
 	{\
 		out T##N( rand() );\
 	}\
-	embed T##N T##N##_random_range( const T##N minimum, const T##N maximum )\
+	embed T##N T##N##_random_range( T##N const minimum, T##N const maximum )\
 	{\
 		out minimum + T##N( ( r4( rand() ) / r4( RAND_MAX ) ) * r4( maximum - minimum + 1 ) );\
 	}
 
 #define FUNCTION_GROUP_BASE_IR( T, N )\
-	embed T##N T##N##_abs( const T##N v )\
+	embed T##N T##N##_abs( T##N const v )\
 	{\
 		out ABS( v );\
 	}\
-	embed T##N T##N##_sign( const T##N v )\
+	embed T##N T##N##_sign( T##N const v )\
 	{\
 		out SIGN( v );\
 	}\
-	embed T##N T##N##_sign_zero( const T##N v )\
+	embed T##N T##N##_sign_zero( T##N const v )\
 	{\
 		out SIGN_ZERO( v );\
 	}
@@ -1200,19 +1202,216 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-#if COMPILER_TCC
-	fn sincosf( const r4 x, const r4 ref sin_x, const r4 ref cos_x )
+#if OS_WINDOWS and COMPILER_TCC
+	fn sincosf( r4 const x, r4 const ref sin_x, r4 const ref cos_x )
 	{
 		val_of( sin_x ) = r4_sin( x );
 		val_of( cos_x ) = r4_cos( x );
 	}
 
-	fn sincos( const r8 x, const r8 ref sin_x, const r8 ref cos_x )
+	fn sincos( r8 const x, r8 const ref sin_x, r8 const ref cos_x )
 	{
 		val_of( sin_x ) = r8_sin( x );
 		val_of( cos_x ) = r8_cos( x );
 	}
 #endif
+
+////////////////////////////////
+/// list
+
+object( list )
+{
+	n2 type_size;
+	n4 count;
+	byte ref bytes;
+	n4 capacity;
+};
+
+embed list _new_list( n2 const type_size, n4 const count, byte ref const bytes, n4 const capacity )
+{
+	temp list const out_list = new_object( list );
+	out_list->type_size = type_size;
+	out_list->count = count;
+	out_list->bytes = bytes;
+	out_list->capacity = pick( capacity <= count, count + 1, capacity );
+	out out_list;
+}
+#define new_list_bytes( TYPE, COUNT, BYTES, CAPACITY ) _new_list( size_of( TYPE ), COUNT, to( byte ref, BYTES ), CAPACITY )
+#define new_list( TYPE, CAPACITY... ) new_list_bytes( TYPE, 0, new_ref( TYPE, DEFAULT( 1, CAPACITY ) ), DEFAULT( 1, CAPACITY ) )
+
+fn delete_list( list in_list )
+{
+	if_nothing( in_list ) out;
+	delete_ref( in_list->bytes );
+	delete_ref( in_list );
+}
+
+object_fn( list, grow )
+{
+	out_if( this->capacity > this->count );
+
+	temp n4 const old_capacity = this->capacity;
+	this->capacity = ( ( this->capacity + ( this->count << 1 ) + 1 ) >> 1 ) + 1;
+	this->bytes = _ref_resize( this->bytes, this->type_size, old_capacity, this->capacity );
+}
+
+object_fn( list, shrink )
+{
+	temp n4 const old_capacity = this->capacity;
+	this->capacity = this->count + 1;
+	this->bytes = _ref_resize( this->bytes, this->type_size, old_capacity, this->capacity );
+}
+
+object_fn( list, set_count, n4 const count )
+{
+	this->count = count;
+	list_grow( this );
+}
+
+#define list_set( LIST, POS, VAL ) ( to( type_of( VAL ) ref, LIST->bytes ) )[ ( POS ) ] = ( VAL )
+#define list_get( LIST, TYPE, POS ) ( ( to( TYPE ref, LIST->bytes ) )[ ( POS ) ] )
+
+object_fn( list, clear )
+{
+	this->count = 0;
+	bytes_clear( this->bytes, this->type_size );
+}
+
+object_fn( list, move, n4 const position, n4 const count, i4 const move_amount )
+{
+	temp n4 const sized_position = position * this->type_size;
+	bytes_move( this->bytes, sized_position, count * this->type_size, move_amount * this->type_size );
+}
+
+#define list_copy_bytes( LIST, POSITION, BYTES, BYTES_COUNT ) bytes_copy( LIST->bytes + ( ( POSITION ) * LIST->type_size ), BYTES, BYTES_COUNT )
+
+#define list_copy( LIST, POSITION, FROM_LIST, FROM_POSITION, FROM_COUNT ) list_copy_bytes( LIST, POSITION, FROM_LIST->bytes + ( ( FROM_POSITION ) * FROM_LIST->type_size ), ( FROM_COUNT ) * FROM_LIST->type_size )
+
+#define list_add( LIST, VAL )\
+	START_DEF\
+	{\
+		list_grow( LIST );\
+		list_set( LIST, LIST->count++, VAL );\
+	}\
+	END_DEF
+
+#define list_insert( LIST, POS, VAL )\
+	START_DEF\
+	{\
+		list_grow( LIST );\
+		list_move( LIST, ( POS ), ( LIST->count++ ) - ( POS ), 1 );\
+		list_set( LIST, POS, VAL );\
+	}\
+	END_DEF
+
+object_fn( list, add_bytes_part, byte const ref const bytes, n4 const bytes_position, n4 const count )
+{
+	temp n4 const old_count = this->count;
+	list_set_count( this, this->count + count );
+	list_copy_bytes( this, old_count, bytes + bytes_position, count * this->type_size );
+}
+#define list_add_bytes( LIST, BYTES, COUNT... ) list_add_bytes_part( LIST, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_add_list_part( LIST, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_add_bytes_part( LIST, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
+#define list_add_list( LIST, OTHER_LIST ) list_add_list_part( LIST, OTHER_LIST, 0, OTHER_LIST->count )
+
+object_fn( list, insert_bytes_part, n4 const position, byte const ref const bytes, n4 const bytes_position, n4 const count )
+{
+	temp n4 const old_count = this->count;
+	list_set_count( this, this->count + count );
+	list_move( this, position, old_count - position, count );
+	list_copy_bytes( this, position, bytes + bytes_position, count * this->type_size );
+}
+#define list_insert_bytes( LIST, POSITION, BYTES, COUNT... ) list_insert_bytes_part( LIST, POSITION, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_insert_list_part( LIST, POSITION, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_insert_bytes_part( LIST, POSITION, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
+#define list_insert_list( LIST, POSITION, OTHER_LIST ) list_insert_list_part( LIST, POSITION, OTHER_LIST, 0, OTHER_LIST->count )
+
+object_fn( list, replace_bytes_part, n4 const position, n4 const replace_count, byte const ref const bytes, n4 const bytes_position, n4 const count )
+{
+	temp n4 const old_count = this->count;
+	temp n4 const pos = position + replace_count;
+	list_set_count( this, this->count - replace_count + count );
+	list_move( this, pos, old_count - pos, i4( this->count ) - old_count );
+	list_copy_bytes( this, position, bytes + bytes_position, count * this->type_size );
+
+	if( this->count < old_count )
+	{
+		bytes_clear( this->bytes + ( this->count * this->type_size ), ( old_count - this->count ) * this->type_size );
+	}
+}
+#define list_replace_bytes( LIST, POSITION, REPLACE_COUNT, BYTES, COUNT... ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
+#define list_replace_list( LIST, POSITION, REPLACE_COUNT, OTHER_LIST ) list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, 0, OTHER_LIST->count )
+
+object_fn( list, delete_part, n4 const position, n4 const delete_count )
+{
+	temp i4 const old_count = this->count;
+	temp i4 const pos = position + delete_count;
+	list_move( this, pos, old_count - pos, -i4( delete_count ) );
+	list_set_count( this, this->count - delete_count );
+
+	bytes_clear( this->bytes + ( this->count * this->type_size ), delete_count * this->type_size );
+}
+#define list_delete( LIST, POSITION ) list_delete_part( LIST, POSITION, 1 )
+
+#define list_remove( LIST, TYPE, POSITION )\
+	list_get( LIST, TYPE, POSITION );\
+	list_delete( LIST, POSITION )
+
+#define list_remove_first( LIST, TYPE ) list_remove( LIST, TYPE, 0 )
+
+#define list_remove_last( LIST, TYPE )\
+	list_get( LIST, TYPE, --LIST->count );\
+	bytes_clear( LIST->bytes + ( LIST->count * LIST->type_size ), LIST->type_size )
+
+#define iter_list( LIST, VAR_NAME )\
+	temp list const _LIST_##VAR_NAME = LIST;\
+	iter( VAR_NAME, LIST->count )
+
+#define list_get_iter( VAR_NAME, TYPE ) list_get( _LIST_##VAR_NAME, TYPE, VAR_NAME )
+
+////////////////////////////////
+/// text
+
+type_from( list ) text;
+
+#define new_text_bytes( BYTES, CAPACITY... ) new_list_bytes( byte, bytes_measure( BYTES ), bytes_paste( new_ref( byte, DEFAULT( bytes_measure( BYTES ) + 1, CAPACITY ) ), BYTES ), DEFAULT( 1, CAPACITY ) )
+#define new_text( CAPACITY... ) new_list( byte, DEFAULT( 1, CAPACITY ) )
+#define delete_text delete_list
+
+#define text_set( TEXT, POS, CHAR ) list_set( TEXT, POS, byte( CHAR ) )
+#define text_get( TEXT, POS ) list_get( TEXT, byte, POS )
+#define text_clear list_clear
+#define text_move list_move
+#define text_copy list_copy
+
+#define text_add( TEXT, CHAR ) list_add( TEXT, byte( CHAR ) )
+#define text_insert( TEXT, POS, CHAR ) list_insert( TEXT, POS, byte( CHAR ) )
+
+#define text_add_bytes_part list_add_bytes_part
+#define text_add_bytes list_add_bytes
+#define text_insert_bytes_part list_insert_bytes_part
+#define text_insert_bytes list_insert_bytes
+#define text_replace_bytes_part list_replace_bytes_part
+#define text_replace_bytes list_replace_bytes
+
+#define text_add_text_part list_add_list_part
+#define text_add_text list_add_list
+#define text_insert_text_part list_insert_list_part
+#define text_insert_text list_insert_list
+#define text_replace_text_part list_replace_list_part
+#define text_replace_text list_replace_list
+
+#define text_delete_part list_delete_part
+#define text_delete list_delete
+
+#define text_remove( TEXT, POSITION ) list_remove( TEXT, byte, POSITION )
+#define text_remove_first( TEXT ) list_remove_first( TEXT, byte )
+#define text_remove_last( TEXT ) list_remove_last( TEXT, byte )
+
+#define text_end( TEXT ) TEXT->bytes[ TEXT->count ] = eof_byte
+#define text_newline( TEXT ) text_add( TEXT, newline_byte )
+
+#define print_text( TEXT ) print( TEXT->bytes )
 
 ////////////////////////////////
 /// time
@@ -1268,7 +1467,7 @@ embed nano get_nano()
 	out _get_nano() - epoch;
 }
 
-fn nano_sleep( const nano time )
+fn nano_sleep( nano const time )
 {
 	#if OS_WINDOWS
 		LARGE_INTEGER freq,
@@ -1303,11 +1502,11 @@ type_from( FILE ref ) os_file_handle;
 ////////
 // input
 
-embed const byte const_ref get_os_input()
+embed byte const ref const get_os_input()
 {
 	perm byte print_input[ KB( 1 ) ];
 	os_file_get_line( print_input, size_of_bytes( print_input ), stdin );
-	temp const n2 input_size = bytes_measure( print_input );
+	temp n2 const input_size = bytes_measure( print_input );
 	out_if( input_size is 0 ) nothing;
 	print_input[ input_size - 1 ] = eof_byte;
 	out print_input;
@@ -1320,14 +1519,14 @@ embed const byte const_ref get_os_input()
 
 #define path( FOLDERS... ) CHAIN(,, separator, FOLDERS )
 
-fn path_up_folder( byte const_ref path )
+fn path_up_folder( byte ref const path )
 {
 	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
 	if( p > path ) val_of( p ) = eof_byte;
 }
 
-embed byte const_ref path_get_name( byte const_ref path )
+embed byte ref const path_get_name( byte ref const path )
 {
 	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
@@ -1335,7 +1534,7 @@ embed byte const_ref path_get_name( byte const_ref path )
 	out p;
 }
 
-embed byte const_ref path_get_extension( byte const_ref path )
+embed byte ref const path_get_extension( byte ref const path )
 {
 	temp byte ref p = path + bytes_measure( path );
 	while( p > path and val_of( --p ) isnt '.' );
@@ -1367,7 +1566,7 @@ group( entry_type )
 	entry_any
 };
 
-embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path_size ], const n2 max_entries, const entry_type type, const flag folder_separator )
+embed n2 get_entries( byte const ref const folder_path, byte entries[][ max_path_size ], n2 const max_entries, entry_type const type, flag const folder_separator )
 {
 	temp n2 count = 0;
 	temp n2 len = bytes_measure( folder_path );
@@ -1437,7 +1636,7 @@ embed n2 get_entries( const byte const_ref folder_path, byte entries[][ max_path
 ////////////////////////////////
 /// folders
 
-fn create_folder( const byte const_ref path )
+fn create_folder( byte const ref const path )
 {
 	#if OS_LINUX
 		mkdir( path, 0755 );
@@ -1446,7 +1645,7 @@ fn create_folder( const byte const_ref path )
 	#endif
 }
 
-fn delete_folder( const byte const_ref path )
+fn delete_folder( byte const ref const path )
 {
 	#if OS_LINUX
 		rmdir( path );
@@ -1455,7 +1654,7 @@ fn delete_folder( const byte const_ref path )
 	#endif
 }
 
-embed flag folder_exists( const byte const_ref path )
+embed flag folder_exists( byte const ref const path )
 {
 	#if OS_LINUX
 		struct stat st;
@@ -1466,7 +1665,7 @@ embed flag folder_exists( const byte const_ref path )
 	#endif
 }
 
-embed flag file_exists( const byte const_ref path )
+embed flag file_exists( byte const ref const path )
 {
 	#if OS_LINUX
 		struct stat st;
@@ -1489,18 +1688,18 @@ type( file )
 	n8 size;
 };
 
-embed n8 get_file_size( const byte const_ref file_path )
+embed n8 get_file_size( byte const ref const file_path )
 {
 	#if OS_LINUX
 		struct stat st;
-		out pick( stat( file_path, ref_of( st ) ) is 0, to( const n8, st.st_size ), 0 );
+		out pick( stat( file_path, ref_of( st ) ) is 0, to( n8 const, st.st_size ), 0 );
 	#elif OS_WINDOWS
 		WIN32_FILE_ATTRIBUTE_DATA fad;
-		out pick( GetFileAttributesExA( file_path, GetFileExInfoStandard, ref_of( fad ) ), to( const n8, ( n8( fad.nFileSizeHigh ) << 32 ) | n8( fad.nFileSizeLow ) ), 0 );
+		out pick( GetFileAttributesExA( file_path, GetFileExInfoStandard, ref_of( fad ) ), to( n8 const, ( n8( fad.nFileSizeHigh ) << 32 ) | n8( fad.nFileSizeLow ) ), 0 );
 	#endif
 }
 
-embed file _open_file_loading( const byte const_ref path, const n4 path_size )
+embed file _open_file_loading( byte const ref const path, n4 const path_size )
 {
 	file f = { 0 };
 	f.size = get_file_size( path );
@@ -1521,7 +1720,7 @@ embed file _open_file_loading( const byte const_ref path, const n4 path_size )
 	out f;
 }
 
-embed file _open_file_saving( const byte const_ref path, const n4 path_size )
+embed file _open_file_saving( byte const ref const path, n4 const path_size )
 {
 	file f = { 0 };
 	f.handle = fopen( path, "wb" );
@@ -1540,7 +1739,7 @@ embed file _open_file_saving( const byte const_ref path, const n4 path_size )
 #define open_file( PATH, PATH_SIZE... ) _open_file_loading( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
 #define new_file( PATH, PATH_SIZE... ) _open_file_saving( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
 
-embed file _map_file( const byte const_ref path, const n4 path_size )
+embed file _map_file( byte const ref const path, n4 const path_size )
 {
 	file f = { 0 };
 
@@ -1580,7 +1779,7 @@ embed file _map_file( const byte const_ref path, const n4 path_size )
 }
 #define map_file( PATH, PATH_SIZE... ) _map_file( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
 
-fn file_load( file ref f, byte const_ref out_bytes )
+fn file_load( file ref f, byte ref const out_bytes )
 {
 	if_nothing( f->handle ) out;
 
@@ -1588,7 +1787,7 @@ fn file_load( file ref f, byte const_ref out_bytes )
 	fread( out_bytes, 1, f->size, f->handle );
 }
 
-fn file_save( file ref f, const byte const_ref bytes, const n8 size )
+fn file_save( file ref f, byte const ref const bytes, n8 const size )
 {
 	if_nothing( f->handle ) out;
 
@@ -1630,7 +1829,7 @@ fn file_unmap( file ref f )
 	file_clear( f );
 }
 
-fn delete_file( const char const_ref path )
+fn delete_file( const byte ref const path )
 {
 	remove( path );
 }
@@ -1686,7 +1885,7 @@ type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
 ////////////////////////////////
 /// start
 
-#define _main_fn out_state main( const i4 start_parameters_count, const byte const_ref const_ref start_parameters )
+#define _main_fn out_state main( i4 const start_parameters_count, byte const ref const ref const start_parameters )
 #define start _main_fn
 
 ////////////////////////////////////////////////////////////////
