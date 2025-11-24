@@ -47,7 +47,7 @@
 	#elif __BYTE_ORDER == __BIG_ENDIAN
 		#define IS_BIG_ENDIAN 1
 	#endif
-	
+
 	#include <sys/stat.h>
 	#include <sys/mman.h>
 	#include <dirent.h>
@@ -587,6 +587,8 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 	fn OBJECT##_##FN( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
 #define new_object_fn( OBJECT, ARGS... )\
 	embed OBJECT new_##OBJECT( ARGS )
+#define delete_object_fn( OBJECT, ARGS... )\
+	fn delete_##OBJECT( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
 
 #define call( OBJECT, FN ) if( OBJECT isnt nothing and OBJECT->FN isnt nothing ) OBJECT->FN( OBJECT )
 
@@ -1240,11 +1242,10 @@ embed list _new_list( n2 const type_size, n4 const count, byte ref const bytes, 
 #define new_list_bytes( TYPE, COUNT, BYTES, CAPACITY ) _new_list( size_of( TYPE ), COUNT, to( byte ref, BYTES ), CAPACITY )
 #define new_list( TYPE, CAPACITY... ) new_list_bytes( TYPE, 0, new_ref( TYPE, DEFAULT( 1, CAPACITY ) ), DEFAULT( 1, CAPACITY ) )
 
-fn delete_list( list in_list )
+delete_object_fn( list )
 {
-	if_nothing( in_list ) out;
-	delete_ref( in_list->bytes );
-	delete_ref( in_list );
+	delete_ref( this->bytes );
+	delete_object( this );
 }
 
 object_fn( list, grow )
@@ -1434,6 +1435,7 @@ type_from( list ) text;
 #define min_per_hour 60
 
 type_from( n8 ) nano;
+#define nano( VAL ) n8( VAL )
 
 embed nano _get_nano()
 {
