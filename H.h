@@ -1367,7 +1367,7 @@ object_fn( list, delete_part, n4 const position, n4 const delete_count )
 
 #define iter_list( LIST, VAR_NAME )\
 	temp list const _LIST_##VAR_NAME = LIST;\
-	iter( VAR_NAME, LIST->count )
+	iter( VAR_NAME, _LIST_##VAR_NAME->count )
 
 #define list_get_iter( VAR_NAME, TYPE ) list_get( _LIST_##VAR_NAME, TYPE, VAR_NAME )
 
