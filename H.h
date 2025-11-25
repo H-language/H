@@ -1178,6 +1178,7 @@ FUNCTION_GROUP_R( 4 );
 #define r4_round roundf
 #define r4_mod fmodf
 #define r4_sqrt sqrtf
+#define r4_pow powf
 #define r4_sincos sincosf
 #define r4_sin sinf
 #define r4_cos cosf
@@ -1196,6 +1197,7 @@ FUNCTION_GROUP_R( 8 );
 #define r8_ceil ceil
 #define r8_mod fmod
 #define r8_sqrt sqrt
+#define r8_pow pow
 #define r8_sincos sincos
 #define r8_sin sin
 #define r8_cos cos
