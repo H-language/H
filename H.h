@@ -61,9 +61,6 @@
 		#include <X11/extensions/Xrender.h>
 		#include <X11/extensions/Xpresent.h>
 		#include <X11/XKBlib.h>
-		#include <sys/ipc.h>
-		#include <sys/shm.h>
-		#include <X11/extensions/XShm.h>
 	#endif
 
 #elif defined( _WIN32 )
