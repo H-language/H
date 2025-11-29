@@ -47,7 +47,6 @@
 	#elif __BYTE_ORDER == __BIG_ENDIAN
 		#define IS_BIG_ENDIAN 1
 	#endif
-
 	#include <sys/stat.h>
 	#include <sys/mman.h>
 	#include <dirent.h>
@@ -62,6 +61,9 @@
 		#include <X11/extensions/Xrender.h>
 		#include <X11/extensions/Xpresent.h>
 		#include <X11/XKBlib.h>
+		#include <sys/ipc.h>
+		#include <sys/shm.h>
+		#include <X11/extensions/XShm.h>
 	#endif
 
 #elif defined( _WIN32 )
