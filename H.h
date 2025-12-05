@@ -54,14 +54,6 @@
 	#include <fcntl.h>
 	#include <pthread.h>
 	#include <unistd.h>
-	#ifdef C7H16
-		//#include <alsa/asoundlib.h>
-		#include <X11/Xlib.h>
-		#include <X11/Xutil.h>
-		#include <X11/extensions/Xrender.h>
-		#include <X11/extensions/Xpresent.h>
-		#include <X11/XKBlib.h>
-	#endif
 
 #elif defined( _WIN32 )
 	#undef OS_WINDOWS
@@ -1415,85 +1407,6 @@ type_from( list ) text;
 #define text_newline( TEXT ) text_add( TEXT, newline_byte )
 
 #define print_text( TEXT ) print( TEXT->bytes )
-
-////////////////////////////////
-/// time
-
-#define nano_per_micro 1000
-#define nano_per_milli 1000000
-#define nano_per_sec 1000000000
-#define nano_per_min 60000000000
-#define nano_per_hour 3600000000000
-#define micro_per_milli 1000
-#define micro_per_sec 1000000
-#define micro_per_min 60000000
-#define micro_per_hour 3600000000
-#define milli_per_sec 1000
-#define milli_per_min 60000
-#define milli_per_hour 3600000
-#define sec_per_min 60
-#define sec_per_hour 3600
-#define min_per_hour 60
-
-type_from( n8 ) nano;
-#define nano( VAL ) n8( VAL )
-
-embed nano _get_nano()
-{
-	#if OS_WINDOWS
-		perm LARGE_INTEGER frequency;
-		perm LARGE_INTEGER start;
-		LARGE_INTEGER current;
-
-		once
-		{
-			QueryPerformanceFrequency( ref_of( frequency ) );
-			QueryPerformanceCounter( ref_of( start ) );
-		}
-
-		QueryPerformanceCounter( ref_of( current ) );
-
-		out( ( current.QuadPart - start.QuadPart ) * 1000000000ULL ) / frequency.QuadPart;
-	#else
-		struct timespec ts;
-		clock_gettime( CLOCK_MONOTONIC, ref_of( ts ) );
-		out to( nano, ts.tv_sec * nano_per_sec + ts.tv_nsec );
-	#endif
-}
-
-embed nano get_nano()
-{
-	perm nano epoch = 0;
-	once
-	{
-		epoch = _get_nano();
-	}
-	out _get_nano() - epoch;
-}
-
-fn nano_sleep( nano const time )
-{
-	#if OS_WINDOWS
-		LARGE_INTEGER freq,
-		start,
-		now;
-		QueryPerformanceFrequency( ref_of( freq ) );
-		QueryPerformanceCounter( ref_of( start ) );
-
-		static HANDLE timer = nothing;
-		once timer = CreateWaitableTimer( nothing, TRUE, nothing );
-
-		LARGE_INTEGER li = { .QuadPart = -( time / 100 ) };
-		SetWaitableTimer( timer, ref_of( li ), 0, nothing, nothing, FALSE );
-		WaitForSingleObject( timer, INFINITE );
-
-		n8 target = start.QuadPart + ( time * freq.QuadPart ) / nano_per_sec;
-		while( QueryPerformanceCounter( ref_of( now ) ), now.QuadPart < target );
-	#else
-		struct timespec ts = { time / nano_per_sec, time mod nano_per_sec };
-		nanosleep( ref_of( ts ), nothing );
-	#endif
-}
 
 ////////////////////////////////
 /// OS file
