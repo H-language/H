@@ -1752,6 +1752,15 @@ fn delete_file( const byte ref const path )
 }
 
 ////////////////////////////////
+/// sleep
+
+#if OS_LINUX
+	#define sleep(ms) usleep((ms) * 1000)
+#elif OS_WINDOWS
+	#define sleep(ms) Sleep(ms)
+#endif
+
+////////////////////////////////
 /// OS threads
 
 type_from( PICK( OS_LINUX, pthread_t, HANDLE ) ) thread_id;
