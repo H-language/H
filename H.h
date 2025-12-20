@@ -581,7 +581,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 #define delete_object_fn( OBJECT, ARGS... )\
 	fn delete_##OBJECT( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
 
-#define call( OBJECT, FN ) if( OBJECT isnt nothing and OBJECT->FN isnt nothing ) OBJECT->FN( OBJECT )
+#define call( OBJECT, FN, ARGS... ) if( OBJECT isnt nothing and OBJECT->FN isnt nothing ) OBJECT->FN( OBJECT COMMA_IF_ARGS( ARGS ) ARGS )
 
 #define type_of_object( OBJECT ) variant OBJECT
 
@@ -1358,7 +1358,7 @@ object_fn( list, delete_part, n4 const position, n4 const delete_count )
 	list_get( LIST, TYPE, --LIST->count );\
 	bytes_clear( LIST->bytes + ( LIST->count * LIST->type_size ), LIST->type_size )
 
-#define iter_list( LIST, VAR_NAME )\
+#define list_iter( LIST, VAR_NAME )\
 	temp list const _LIST_##VAR_NAME = LIST;\
 	iter( VAR_NAME, _LIST_##VAR_NAME->count )
 
