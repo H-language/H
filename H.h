@@ -14,7 +14,6 @@
 ////////////////////////////////
 /// include(s)
 
-#define _GNU_SOURCE
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -333,7 +332,7 @@ type_from( _Bool ) flag;
 #define iter_step_inv( POS_NAME, SIZE, STEP ) _range( POS_NAME, SIZE, 0, STEP, >, -= )
 
 #define iter( POS_NAME, SIZE ) _range( POS_NAME, 0, SIZE, 1, <, += )
-#define iter_inv( POS_NAME, SIZE ) _range( POS_NAME, SIZE, 0, 1, >, -= )
+#define iter_inv( POS_NAME, SIZE ) _range( POS_NAME, SIZE - 1, 0, 1, >=, -= )
 
 #define iter_grid( X_NAME, Y_NAME, WIDTH, HEIGHT ) iter( Y_NAME, HEIGHT ) iter( X_NAME, WIDTH )
 
@@ -1363,6 +1362,10 @@ object_fn( list, delete_part, n4 const position, n4 const delete_count )
 	iter( VAR_NAME, _LIST_##VAR_NAME->count )
 
 #define list_get_iter( VAR_NAME, TYPE ) list_get( _LIST_##VAR_NAME, TYPE, VAR_NAME )
+
+#define list_iter_inv( LIST, VAR_NAME )\
+	temp list const _LIST_##VAR_NAME = LIST;\
+	iter_inv( VAR_NAME, _LIST_##VAR_NAME->count )
 
 ////////////////////////////////
 /// text
