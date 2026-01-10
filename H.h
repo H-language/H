@@ -1,4 +1,4 @@
-////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
 //  Hydrogen Language (H-lang)
 //
@@ -10,9 +10,11 @@
 //
 
 #pragma once
+#define HYDROGEN
 
-////////////////////////////////
-/// include(s)
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// dependencies
+/// dependencies
+//
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -21,16 +23,22 @@
 #include <string.h>
 #include <math.h>
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// version
 /// version
+//
 
 #define H_VERSION_MAJOR 0
 #define H_VERSION_MINOR 1
 #define H_VERSION_PATCH 0
 #define H_VERSION AS_BYTES( H_VERSION_MAJOR ) "." AS_BYTES( H_VERSION_MINOR ) "." AS_BYTES( H_VERSION_PATCH )
 
-////////////////////////////////
-/// OS specific
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS
+/// OS
+//
 
 #define OS_LINUX 0
 #define OS_WINDOWS 0
@@ -76,8 +84,11 @@
 	#define OS_NAME "unknown"
 #endif
 
-////////////////////////////////
-/// compiler specific
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// compiler
+/// compiler
+//
 
 #define COMPILER_GCC 0
 #define COMPILER_TCC 0
@@ -111,16 +122,11 @@
 	#define COMPILER_NAME "unknown"
 #endif
 
-////////////////////////////////
-/// scoped defines
+//
 
-#define START_DEF do
-#define END_DEF while( 0 )
-
-#define REQUIRE_SEMICOLON START_DEF {} END_DEF
-
-////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// magic macros
 /// magic macros
+//
 
 #define _EVAL( ARGS... ) ARGS
 #define EVAL( ARGS... ) _EVAL( ARGS )
@@ -162,7 +168,7 @@
 #define _AS_BYTES( VALUE ) #VALUE
 #define AS_BYTES( VALUE ) _AS_BYTES( VALUE )
 
-////////
+////////////////////////////////
 // default arguments
 
 #define _DEFAULT_EVAL( ARGS... ) GET_ARG1( ARGS )
@@ -187,7 +193,7 @@
 #define _DEFAULTS_MAKE( COUNT, DEFS, ARGS... ) JOIN( _DEFAULTS_, COUNT ) ( DEFS, ARGS )
 #define DEFAULTS( DEFS, ARGS... ) _DEFAULTS_MAKE( COUNT_ARGS DEFS, DEFS, ARGS )
 
-////////
+////////////////////////////////
 // symbol chains
 
 #define _CHAIN_0( MODE, L, R, MID, ARGS... ) ARGS
@@ -216,11 +222,21 @@
 #define CHAIN_PAREN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), PAREN, L, R, MID, ARGS )
 
 ////////////////////////////////
+// scoped define
+
+#define START_DEF do
+#define END_DEF while( 0 )
+
+#define REQUIRE_SEMICOLON START_DEF {} END_DEF
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// prefixes
 /// prefixes
+//
 
 #define temp register
 #define perm static
-#define global perm
 
 #if OS_LINUX
 	#define cache_align __attribute__( ( aligned( 64 ) ) )
@@ -228,8 +244,11 @@
 	#define cache_align __declspec( align( 64 ) )
 #endif
 
-////////////////////////////////
-/// references/values
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// ref/val
+/// ref/val
+//
 
 #define ref *
 
@@ -246,8 +265,11 @@
 #define type_of( VAR... ) typeof( VAR )
 #define type_of_ref( REF... ) type_of( val_of( to( type_of( REF ), nothing ) ) )
 
-////////////////////////////////
-/// functions
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn
+/// fn
+//
 
 #define embed perm inline
 #define fn embed anon
@@ -256,8 +278,11 @@
 #define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
 #define fn_type( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
 
-////////////////////////////////
-/// flags
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// flag
+/// flag
+//
 
 type_from( _Bool ) flag;
 #define flag( ARGS... ) to( flag, !! ( ARGS ) )
@@ -265,8 +290,8 @@ type_from( _Bool ) flag;
 #define no 0
 #define flip( FLAG ) FLAG ^= 1
 
-////////
-// flag logic
+////////////////////////////////
+// logic
 
 #define not !
 #define and &&
@@ -296,8 +321,11 @@ type_from( _Bool ) flag;
 #define if_none( ARGS... ) if none( ARGS )
 #define if_not_all( ARGS... ) if not_all( ARGS )
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// loops
 /// loops
+//
 
 #define loop for( ;; )
 #define next continue
@@ -305,15 +333,21 @@ type_from( _Bool ) flag;
 #define jump goto
 #define until( ARGS... ) while( not( ARGS ) )
 
-////////
-// with/when jump-tree
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// with/when
+/// with/when
+//
 
 #define with switch
 #define when( ARGS... ) CHAIN( case, :,, ARGS )
 #define other default:
 
-////////
-// range (inclusive)
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// range
+/// range (inclusive)
+//
 
 #define _range( POS_NAME, FROM, TO, STEP, SYMBOL_COMPARE, SYMBOL_STEP ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL_COMPARE i8( TO ); POS_NAME SYMBOL_STEP i8( STEP ) )
 
@@ -325,8 +359,11 @@ type_from( _Bool ) flag;
 
 #define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO ) range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
 
-////////
-// iterate (exclusive)
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// iterate
+/// iterate (exclusive)
+//
 
 #define iter_step( POS_NAME, SIZE, STEP ) _range( POS_NAME, 0, SIZE, STEP, <, += )
 #define iter_step_inv( POS_NAME, SIZE, STEP ) _range( POS_NAME, SIZE, 0, STEP, >, -= )
@@ -344,8 +381,11 @@ type_from( _Bool ) flag;
 	if( _ONCE_ and( _ONCE_ = no, yes ) )
 #define once _once( JOIN( _ONCE_, __COUNTER__ ) )
 
-////////
-// conditionals
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// conditionals
+/// conditionals
+//
 
 #define while_any( ARGS... ) while any( ARGS )
 #define while_all( ARGS... ) while all( ARGS )
@@ -384,19 +424,22 @@ type_from( _Bool ) flag;
 #define out_if_none( ARGS... ) if_none( ARGS ) out
 #define out_if_not_all( ARGS... ) if_not_all( ARGS ) out
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// value types
 /// value types
+//
 
 type_from( char ) byte;
 #define byte( VAL ) to( byte, VAL )
 #define size_of_bytes( BYTES ) ( size_of( BYTES ) - 1 )
 
-////////
+////////////////////////////////
 // bits
 
 #define n_to_bits( N ) pick( ( N ) <= 1, 1, ( 32 - __builtin_clz( ( N ) - 1 ) ) )
 
-////////
+////////////////////////////////
 // natural 1/2/4/8, integer 1/2/4/8, rational 4/8
 
 // 1 byte
@@ -449,16 +492,22 @@ type_from( int64_t ) i8;
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
 
-////////////////////////////////
-/// function output state
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// output state
+/// output state
+//
 
 type_from( i4 ) out_state;
 #define success 0
 #define failure 1
 #define warning 2
 
-////////////////////////////////
-/// function arguments
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn args
+/// fn args
+//
 
 #define arg_list va_list
 #define args_init( ARG_LIST, BEFORE_ELLIPSIS ) va_start( ARG_LIST, BEFORE_ELLIPSIS )
@@ -479,8 +528,11 @@ type_from( i4 ) out_state;
 #define _args_next_ref long ref
 #define args_next( ARGS, TYPE ) va_arg( ARGS, _args_next_##TYPE )
 
-////////////////////////////////
-/// bytes (a byte ref)
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// bytes
+/// bytes (byte ref)
+//
 
 #define is_letter( BYTE ) ( ( ( n4( BYTE ) | 0x20 ) - 'a' ) < 26 )
 #define is_number( BYTE ) ( ( n4( BYTE ) - '0' ) < 10 )
@@ -510,7 +562,7 @@ type_from( i4 ) out_state;
 #define bytes_measure( REF ) strlen( REF )
 #define bytes_end( BYTES ) val_of( BYTES ) = eof_byte
 
-////////
+////////////////////////////////
 // auto-move variations
 
 #define bytes_copy_move( TO_REF, FROM_REF, FROM_SIZE )\
@@ -535,8 +587,11 @@ type_from( i4 ) out_state;
 #define bytes_newline_move( TO_REF ) bytes_set_move( TO_REF, newline_byte )
 #define bytes_separator_move( TO_REF ) bytes_set_move( TO_REF, separator_byte )
 
-////////////////////////////////
-/// allocated references/bytes
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// allocated ref
+/// allocated ref
+//
 
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
 #define delete_ref( REF ) if_something( REF ) free( REF )
@@ -552,49 +607,35 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 }
 #define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
 
-////////////////////////////////
-/// new declarations
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// declare types
+/// declare types
+//
 
 #define packed __attribute__( ( packed ) )
 #define variant struct
+#define global perm variant
 
-////////
+////////////////////////////////
 // type
 
-#define _type_make( NAME, REF, EXTRA... )\
-	type_from( variant NAME REF ) NAME;\
-	EXTRA;\
+#define type( NAME )\
+	type_from( variant NAME ) NAME;\
+	fn_type(, NAME const ) NAME##_fn;\
+	fn_type(, NAME ref const ) NAME##_ref_fn;\
 	variant NAME
-#define type( NAME ) _type_make( NAME, )
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
 
-////////
-// object
-
-#define object( NAME ) _type_make( NAME, ref, fn_type(, NAME this ) NAME##_fn )
-#define object_fn( OBJECT, FN, ARGS... )\
-	fn OBJECT##_##FN( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
-#define new_object_fn( OBJECT, ARGS... )\
-	embed OBJECT new_##OBJECT( ARGS )
-#define delete_object_fn( OBJECT, ARGS... )\
-	fn delete_##OBJECT( OBJECT const this COMMA_IF_ARGS( ARGS ) ARGS )
-
-#define call( OBJECT, FN, ARGS... ) if( OBJECT isnt nothing and OBJECT->FN isnt nothing ) OBJECT->FN( OBJECT COMMA_IF_ARGS( ARGS ) ARGS )
-
-#define type_of_object( OBJECT ) variant OBJECT
-
-#define new_object( OBJECT ) new_ref( type_of_object( OBJECT ) )
-#define delete_object( OBJECT ) delete_ref( OBJECT )
-
-////////
+////////////////////////////////
 // fusion
 
 #define fusion( NAME )\
 	type_from( union NAME ) NAME;\
 	union NAME
 
-////////
+////////////////////////////////
 // group
 
 #define group( NAME, TYPE... )\
@@ -849,8 +890,11 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 	}\
 	END_DEF
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// terminal print
 /// terminal print
+//
 
 #define print( BYTES ) fputs( BYTES, stdout )
 #define print_count( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
@@ -872,7 +916,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 #define print_separator() print_count( separator, 1 )
 #define print_tab() print_count( tab, 1 )
 
-////////
+////////////////////////////////
 // formats
 
 #define format_reset "\033[0m"
@@ -932,7 +976,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 #define format_bg_dark_magenta format_bg_rgb( 119, 34, 119 )
 #define format_bg_default "\033[49m"
 
-////////
+////////////////////////////////
 // print format
 
 #define print_set_format( FORMAT ) print_count( format_##FORMAT, size_of( format_##FORMAT ) )
@@ -967,8 +1011,11 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 
 #define print_clear() system( PICK( OS_WINDOWS, "cls", "clear" ) )
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// mathematics
 /// mathematics
+//
 
 #define MIN( A, B ) pick( ( A ) < ( B ), ( A ), ( B ) )
 #define MIN3( A, B, C ) MIN( A, MIN( B, C ) )
@@ -1003,7 +1050,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 #define MAP( V, A, B, C, D ) ( ( V ) - ( A ) ) * ( ( D ) - ( C ) ) / ( ( B ) - ( A ) ) + ( C )
 #define RANGE( V, LOWER, UPPER ) ( ( V - ( LOWER ) ) / ( ( UPPER ) - ( LOWER ) ) )
 
-////////
+////////////////////////////////
 // math functions
 
 #define FUNCTION_GROUP_BASE( T, N )\
@@ -1211,10 +1258,13 @@ FUNCTION_GROUP_R( 8 );
 	}
 #endif
 
-////////////////////////////////
-/// list
+//
 
-object( list )
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// list
+/// list
+//
+
+type( list )
 {
 	n2 type_size;
 	n4 count;
@@ -1224,57 +1274,60 @@ object( list )
 
 embed list _new_list( n2 const type_size, n4 const count, byte ref const bytes, n4 const capacity )
 {
-	temp list const out_list = new_object( list );
-	out_list->type_size = type_size;
-	out_list->count = count;
-	out_list->bytes = bytes;
-	out_list->capacity = pick( capacity <= count, count + 1, capacity );
-	out out_list;
+	temp list this;
+	this.type_size = type_size;
+	this.count = count;
+	this.bytes = bytes;
+	this.capacity = pick( capacity <= count, count + 1, capacity );
+	out this;
 }
 #define new_list_bytes( TYPE, COUNT, BYTES, CAPACITY ) _new_list( size_of( TYPE ), COUNT, to( byte ref, BYTES ), CAPACITY )
 #define new_list( TYPE, CAPACITY... ) new_list_bytes( TYPE, 0, new_ref( TYPE, DEFAULT( 1, CAPACITY ) ), DEFAULT( 1, CAPACITY ) )
 
-delete_object_fn( list )
+fn delete_list( list ref const list_ref )
 {
-	delete_ref( this->bytes );
-	delete_object( this );
+	delete_ref( list_ref->bytes );
+	val_of( list_ref ) = make( list );
 }
 
-object_fn( list, grow )
+fn list_grow( list ref const list_ref )
 {
-	out_if( this->capacity > this->count );
+	out_if( list_ref->capacity > list_ref->count );
 
-	temp n4 const old_capacity = this->capacity;
-	this->capacity = ( ( this->capacity + ( this->count << 1 ) + 1 ) >> 1 ) + 1;
-	this->bytes = _ref_resize( this->bytes, this->type_size, old_capacity, this->capacity );
+	temp n4 const old_capacity = list_ref->capacity;
+	list_ref->capacity = ( ( list_ref->capacity + ( list_ref->count << 1 ) + 1 ) >> 1 ) + 1;
+	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size, old_capacity, list_ref->capacity );
 }
 
-object_fn( list, shrink )
+fn list_shrink( list ref const list_ref )
 {
-	temp n4 const old_capacity = this->capacity;
-	this->capacity = this->count + 1;
-	this->bytes = _ref_resize( this->bytes, this->type_size, old_capacity, this->capacity );
+	temp n4 const old_capacity = list_ref->capacity;
+	list_ref->capacity = list_ref->count + 1;
+	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size, old_capacity, list_ref->capacity );
 }
 
-object_fn( list, set_count, n4 const count )
+fn list_set_count( list ref const list_ref, n4 const count )
 {
-	this->count = count;
-	list_grow( this );
+	list_ref->count = count;
+	list_grow( list_ref );
 }
 
 #define list_set( LIST, POS, VAL ) ( to( type_of( VAL ) ref, LIST->bytes ) )[ ( POS ) ] = ( VAL )
-#define list_get( LIST, TYPE, POS ) ( ( to( TYPE ref, LIST->bytes ) )[ ( POS ) ] )
+#define list_get( LIST, TYPE, POS ) ( ( to( TYPE ref, LIST.bytes ) )[ ( POS ) ] )
 
-object_fn( list, clear )
+#define list_first( LIST, TYPE ) list_get( LIST, TYPE, 0 )
+#define list_last( LIST, TYPE ) list_get( LIST, TYPE, ( LIST ).count - 1 )
+
+fn list_clear( list ref const list_ref )
 {
-	this->count = 0;
-	bytes_clear( this->bytes, this->type_size );
+	list_ref->count = 0;
+	bytes_clear( list_ref->bytes, list_ref->type_size );
 }
 
-object_fn( list, move, n4 const position, n4 const count, i4 const move_amount )
+fn list_move( list ref const list_ref, n4 const position, n4 const count, i4 const move_amount )
 {
-	temp n4 const sized_position = position * this->type_size;
-	bytes_move( this->bytes, sized_position, count * this->type_size, move_amount * this->type_size );
+	temp n4 const sized_position = position * list_ref->type_size;
+	bytes_move( list_ref->bytes, sized_position, count * list_ref->type_size, move_amount * list_ref->type_size );
 }
 
 #define list_copy_bytes( LIST, POSITION, BYTES, BYTES_COUNT ) bytes_copy( LIST->bytes + ( ( POSITION ) * LIST->type_size ), BYTES, BYTES_COUNT )
@@ -1298,52 +1351,52 @@ object_fn( list, move, n4 const position, n4 const count, i4 const move_amount )
 	}\
 	END_DEF
 
-object_fn( list, add_bytes_part, byte const ref const bytes, n4 const bytes_position, n4 const count )
+fn list_add_bytes_part( list ref const list_ref, byte const ref const bytes, n4 const bytes_position, n4 const count )
 {
-	temp n4 const old_count = this->count;
-	list_set_count( this, this->count + count );
-	list_copy_bytes( this, old_count, bytes + bytes_position, count * this->type_size );
+	temp n4 const old_count = list_ref->count;
+	list_set_count( list_ref, list_ref->count + count );
+	list_copy_bytes( list_ref, old_count, bytes + bytes_position, count * list_ref->type_size );
 }
 #define list_add_bytes( LIST, BYTES, COUNT... ) list_add_bytes_part( LIST, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
 #define list_add_list_part( LIST, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_add_bytes_part( LIST, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
 #define list_add_list( LIST, OTHER_LIST ) list_add_list_part( LIST, OTHER_LIST, 0, OTHER_LIST->count )
 
-object_fn( list, insert_bytes_part, n4 const position, byte const ref const bytes, n4 const bytes_position, n4 const count )
+fn list_insert_bytes_part( list ref const list_ref, n4 const position, byte const ref const bytes, n4 const bytes_position, n4 const count )
 {
-	temp n4 const old_count = this->count;
-	list_set_count( this, this->count + count );
-	list_move( this, position, old_count - position, count );
-	list_copy_bytes( this, position, bytes + bytes_position, count * this->type_size );
+	temp n4 const old_count = list_ref->count;
+	list_set_count( list_ref, list_ref->count + count );
+	list_move( list_ref, position, old_count - position, count );
+	list_copy_bytes( list_ref, position, bytes + bytes_position, count * list_ref->type_size );
 }
 #define list_insert_bytes( LIST, POSITION, BYTES, COUNT... ) list_insert_bytes_part( LIST, POSITION, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
 #define list_insert_list_part( LIST, POSITION, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_insert_bytes_part( LIST, POSITION, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
 #define list_insert_list( LIST, POSITION, OTHER_LIST ) list_insert_list_part( LIST, POSITION, OTHER_LIST, 0, OTHER_LIST->count )
 
-object_fn( list, replace_bytes_part, n4 const position, n4 const replace_count, byte const ref const bytes, n4 const bytes_position, n4 const count )
+fn list_replace_bytes_part( list ref const list_ref, n4 const position, n4 const replace_count, byte const ref const bytes, n4 const bytes_position, n4 const count )
 {
-	temp n4 const old_count = this->count;
+	temp n4 const old_count = list_ref->count;
 	temp n4 const pos = position + replace_count;
-	list_set_count( this, this->count - replace_count + count );
-	list_move( this, pos, old_count - pos, i4( this->count ) - old_count );
-	list_copy_bytes( this, position, bytes + bytes_position, count * this->type_size );
+	list_set_count( list_ref, list_ref->count - replace_count + count );
+	list_move( list_ref, pos, old_count - pos, i4( list_ref->count ) - old_count );
+	list_copy_bytes( list_ref, position, bytes + bytes_position, count * list_ref->type_size );
 
-	if( this->count < old_count )
+	if( list_ref->count < old_count )
 	{
-		bytes_clear( this->bytes + ( this->count * this->type_size ), ( old_count - this->count ) * this->type_size );
+		bytes_clear( list_ref->bytes + ( list_ref->count * list_ref->type_size ), ( old_count - list_ref->count ) * list_ref->type_size );
 	}
 }
 #define list_replace_bytes( LIST, POSITION, REPLACE_COUNT, BYTES, COUNT... ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
 #define list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
 #define list_replace_list( LIST, POSITION, REPLACE_COUNT, OTHER_LIST ) list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, 0, OTHER_LIST->count )
 
-object_fn( list, delete_part, n4 const position, n4 const delete_count )
+fn list_delete_part( list ref const list_ref, n4 const position, n4 const delete_count )
 {
-	temp i4 const old_count = this->count;
+	temp i4 const old_count = list_ref->count;
 	temp i4 const pos = position + delete_count;
-	list_move( this, pos, old_count - pos, -i4( delete_count ) );
-	list_set_count( this, this->count - delete_count );
+	list_move( list_ref, pos, old_count - pos, -i4( delete_count ) );
+	list_set_count( list_ref, list_ref->count - delete_count );
 
-	bytes_clear( this->bytes + ( this->count * this->type_size ), delete_count * this->type_size );
+	bytes_clear( list_ref->bytes + ( list_ref->count * list_ref->type_size ), delete_count * list_ref->type_size );
 }
 #define list_delete( LIST, POSITION ) list_delete_part( LIST, POSITION, 1 )
 
@@ -1358,17 +1411,20 @@ object_fn( list, delete_part, n4 const position, n4 const delete_count )
 	bytes_clear( LIST->bytes + ( LIST->count * LIST->type_size ), LIST->type_size )
 
 #define list_iter( LIST, VAR_NAME )\
-	temp list const _LIST_##VAR_NAME = LIST;\
+	temp list ref const _LIST_##VAR_NAME = ref_of( LIST );\
 	iter( VAR_NAME, _LIST_##VAR_NAME->count )
 
-#define list_get_iter( VAR_NAME, TYPE ) list_get( _LIST_##VAR_NAME, TYPE, VAR_NAME )
+#define list_get_iter( VAR_NAME, TYPE ) list_get( val_of( _LIST_##VAR_NAME ), TYPE, VAR_NAME )
 
 #define list_iter_inv( LIST, VAR_NAME )\
 	temp list const _LIST_##VAR_NAME = LIST;\
 	iter_inv( VAR_NAME, _LIST_##VAR_NAME->count )
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// text
 /// text
+//
 
 type_from( list ) text;
 
@@ -1411,15 +1467,18 @@ type_from( list ) text;
 
 #define print_text( TEXT ) print( TEXT->bytes )
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS file
 /// OS file
+//
 
 type_from( FILE ref ) os_file_handle;
 
 #define os_file_get_line fgets
 #define system_read( COMMAND ) popen( COMMAND, "r" )
 
-////////
+////////////////////////////////
 // input
 
 embed byte const ref const get_os_input()
@@ -1432,8 +1491,11 @@ embed byte const ref const get_os_input()
 	out print_input;
 }
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS path
 /// OS path
+//
 
 #define max_path_size 260
 
@@ -1473,8 +1535,11 @@ embed byte ref get_exe_path()
 	out exe_path;
 }
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS entries
 /// OS entries (folders/files)
+//
 
 #define max_entry_size 65
 
@@ -1553,8 +1618,11 @@ embed n2 get_entries( byte const ref const folder_path, byte entries[][ max_path
 #define get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
 #define get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
 
-////////////////////////////////
-/// folders
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// folder
+/// folder
+//
 
 fn create_folder( byte const ref const path )
 {
@@ -1596,8 +1664,11 @@ embed flag file_exists( byte const ref const path )
 	#endif
 }
 
-////////////////////////////////
-/// files
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// file
+/// file
+//
 
 type( file )
 {
@@ -1754,21 +1825,25 @@ fn delete_file( const byte ref const path )
 	remove( path );
 }
 
-////////////////////////////////
-/// sleep
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// milli-sleep
+/// milli-sleep
+//
 
 #if OS_LINUX
-	#define sleep(ms) usleep((ms) * 1000)
+	#define sleep( ms ) usleep( ( ms ) * 1000 )
 #elif OS_WINDOWS
-	#define sleep(ms) Sleep(ms)
+	#define sleep( ms ) Sleep( ms )
 #endif
 
-////////////////////////////////
-/// OS threads
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// thread
+/// thread
+//
 
 type_from( PICK( OS_LINUX, pthread_t, HANDLE ) ) thread_id;
-
-fn_type( anon ref, anon ref ) thread_fn;
 
 type( thread )
 {
@@ -1811,10 +1886,15 @@ type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
 	#define thread_remove_lock( LOCK ) DeleteCriticalSection( ref_of( LOCK ) )
 #endif
 
-////////////////////////////////
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// start
 /// start
+//
 
 #define _main_fn out_state main( i4 const start_parameters_count, byte const ref const ref const start_parameters )
 #define start _main_fn
 
-////////////////////////////////////////////////////////////////
+//
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
