@@ -1417,7 +1417,7 @@ fn list_delete_part( list ref const list_ref, n4 const position, n4 const delete
 #define list_get_iter( VAR_NAME, TYPE ) list_get( val_of( _LIST_##VAR_NAME ), TYPE, VAR_NAME )
 
 #define list_iter_inv( LIST, VAR_NAME )\
-	temp list const _LIST_##VAR_NAME = LIST;\
+	temp list ref const _LIST_##VAR_NAME = ref_of( LIST );\
 	iter_inv( VAR_NAME, _LIST_##VAR_NAME->count )
 
 //
