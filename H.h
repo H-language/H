@@ -276,7 +276,7 @@
 #define out return
 
 #define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
-#define fn_type( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
+#define type_fn( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
 
 //
 
@@ -622,8 +622,12 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 
 #define type( NAME )\
 	type_from( variant NAME ) NAME;\
-	fn_type(, NAME const ) NAME##_fn;\
-	fn_type(, NAME ref const ) NAME##_ref_fn;\
+	variant NAME
+
+#define _TEMP_type( NAME )\
+	type_from( variant NAME ) NAME;\
+	type_fn(, NAME const ) NAME##_fn;\
+	type_fn(, NAME ref const ) NAME##_ref_fn;\
 	variant NAME
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
@@ -1244,14 +1248,15 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-#if OS_WINDOWS and COMPILER_TCC
-	fn sincosf( r4 const x, r4 const ref sin_x, r4 const ref cos_x )
+//#if OS_WINDOWS and COMPILER_TCC
+#if 1
+	fn sincosf( r4 const x, r4 ref const sin_x, r4 ref const cos_x )
 	{
 		val_of( sin_x ) = r4_sin( x );
 		val_of( cos_x ) = r4_cos( x );
 	}
 
-	fn sincos( r8 const x, r8 const ref sin_x, r8 const ref cos_x )
+	fn sincos( r8 const x, r8 ref const sin_x, r8 ref const cos_x )
 	{
 		val_of( sin_x ) = r8_sin( x );
 		val_of( cos_x ) = r8_cos( x );
@@ -1844,6 +1849,9 @@ fn delete_file( const byte ref const path )
 //
 
 type_from( PICK( OS_LINUX, pthread_t, HANDLE ) ) thread_id;
+
+type( thread );
+type_fn( anon ref, anon ref const ) thread_fn;
 
 type( thread )
 {
