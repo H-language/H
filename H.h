@@ -510,8 +510,8 @@ type_from( i4 ) out_state;
 //
 
 #define arg_list va_list
-#define args_init( ARG_LIST, BEFORE_ELLIPSIS ) va_start( ARG_LIST, BEFORE_ELLIPSIS )
-#define args_end( ARG_LIST ) va_end( ARG_LIST )
+#define args_init( ARG_LIST_REF, BEFORE_ELLIPSIS ) va_start( ARG_LIST_REF, BEFORE_ELLIPSIS )
+#define args_end( ARG_LIST_REF ) va_end( ARG_LIST_REF )
 #define args_copy( FROM, TO ) va_copy( TO, FROM )
 
 #define _args_next_byte int
@@ -593,6 +593,7 @@ type_from( i4 ) out_state;
 /// allocated ref
 //
 
+/*
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
 #define delete_ref( REF ) if_something( REF ) free( REF )
 
@@ -606,6 +607,44 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 	out new_ptr;
 }
 #define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
+*/
+
+#define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
+
+embed anon ref _alloc( n8 const size )
+{
+	#if OS_LINUX
+		temp anon ref const p = mmap( nothing, _alloc_page_round( size ), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+		out pick( p is MAP_FAILED, nothing, p );
+	#elif OS_WINDOWS
+		out VirtualAlloc( nothing, _alloc_page_round( size ), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
+	#endif
+}
+
+fn _free( anon ref const r, n8 const size )
+{
+	#if OS_LINUX
+		munmap( r, _alloc_page_round( size ) );
+	#elif OS_WINDOWS
+		VirtualFree( r, 0, MEM_RELEASE );
+	#endif
+}
+
+#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
+#define delete_ref( REF, SIZE ) if_something( REF ) _free( REF, SIZE )
+
+embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const new_size )
+{
+	temp anon ref const p = _alloc( new_size );
+	out_if( p is nothing ) nothing;
+	if_something( r )
+	{
+		bytes_copy( p, r, pick( old_size < new_size, old_size, new_size ) );
+		_free( r, old_size );
+	}
+	out p;
+}
+#define ref_resize( REF, OLD_SIZE, NEW_SIZE ) to( type_of( REF ), _ref_resize( REF, OLD_SIZE, NEW_SIZE ) )
 
 //
 
@@ -1248,8 +1287,8 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-//#if OS_WINDOWS and COMPILER_TCC
-#if 1
+#if OS_WINDOWS and COMPILER_TCC
+	//#if 1
 	fn sincosf( r4 const x, r4 ref const sin_x, r4 ref const cos_x )
 	{
 		val_of( sin_x ) = r4_sin( x );
@@ -1291,37 +1330,38 @@ embed list _new_list( n2 const type_size, n4 const count, byte ref const bytes, 
 
 fn delete_list( list ref const list_ref )
 {
-	delete_ref( list_ref->bytes );
+	delete_ref( list_ref->bytes, list_ref->type_size * list_ref->capacity );
 	val_of( list_ref ) = make( list );
 }
 
-fn list_grow( list ref const list_ref )
+fn _list_ensure_capacity( list ref const list_ref, n4 const min_count )
 {
-	out_if( list_ref->capacity > list_ref->count );
+	out_if( list_ref->capacity > min_count );
 
 	temp n4 const old_capacity = list_ref->capacity;
-	list_ref->capacity = ( ( list_ref->capacity + ( list_ref->count << 1 ) + 1 ) >> 1 ) + 1;
-	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size, old_capacity, list_ref->capacity );
+	temp n4 new_capacity = ( ( list_ref->capacity << 1 ) + list_ref->capacity + 3 ) >> 1;
+	list_ref->capacity = pick( new_capacity <= min_count, min_count + 1, new_capacity );
+	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size * old_capacity, list_ref->type_size * list_ref->capacity );
 }
 
 fn list_shrink( list ref const list_ref )
 {
 	temp n4 const old_capacity = list_ref->capacity;
 	list_ref->capacity = list_ref->count + 1;
-	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size, old_capacity, list_ref->capacity );
+	list_ref->bytes = _ref_resize( list_ref->bytes, list_ref->type_size * old_capacity, list_ref->type_size * list_ref->capacity );
 }
 
 fn list_set_count( list ref const list_ref, n4 const count )
 {
+	_list_ensure_capacity( list_ref, count );
 	list_ref->count = count;
-	list_grow( list_ref );
 }
 
-#define list_set( LIST, POS, VAL ) ( to( type_of( VAL ) ref, LIST->bytes ) )[ ( POS ) ] = ( VAL )
-#define list_get( LIST, TYPE, POS ) ( ( to( TYPE ref, LIST.bytes ) )[ ( POS ) ] )
+#define list_set( LIST_REF, POS, VAL ) ( to( type_of( VAL ) ref, LIST_REF->bytes ) )[ ( POS ) ] = ( VAL )
+#define list_get( LIST_REF, TYPE, POS ) ( ( to( TYPE ref, LIST_REF->bytes ) )[ ( POS ) ] )
 
-#define list_first( LIST, TYPE ) list_get( LIST, TYPE, 0 )
-#define list_last( LIST, TYPE ) list_get( LIST, TYPE, ( LIST ).count - 1 )
+#define list_first( LIST_REF, TYPE ) list_get( LIST_REF, TYPE, 0 )
+#define list_last( LIST_REF, TYPE ) list_get( LIST_REF, TYPE, ( LIST_REF ).count - 1 )
 
 fn list_clear( list ref const list_ref )
 {
@@ -1335,24 +1375,24 @@ fn list_move( list ref const list_ref, n4 const position, n4 const count, i4 con
 	bytes_move( list_ref->bytes, sized_position, count * list_ref->type_size, move_amount * list_ref->type_size );
 }
 
-#define list_copy_bytes( LIST, POSITION, BYTES, BYTES_COUNT ) bytes_copy( LIST->bytes + ( ( POSITION ) * LIST->type_size ), BYTES, BYTES_COUNT )
+#define list_copy_bytes( LIST_REF, POSITION, BYTES, BYTES_COUNT ) bytes_copy( LIST_REF->bytes + ( ( POSITION ) * LIST_REF->type_size ), BYTES, BYTES_COUNT )
 
-#define list_copy( LIST, POSITION, FROM_LIST, FROM_POSITION, FROM_COUNT ) list_copy_bytes( LIST, POSITION, FROM_LIST->bytes + ( ( FROM_POSITION ) * FROM_LIST->type_size ), ( FROM_COUNT ) * FROM_LIST->type_size )
+#define list_copy( LIST_REF, POSITION, FROM_LIST_REF, FROM_POSITION, FROM_COUNT ) list_copy_bytes( LIST_REF, POSITION, FROM_LIST_REF->bytes + ( ( FROM_POSITION ) * FROM_LIST_REF->type_size ), ( FROM_COUNT ) * FROM_LIST_REF->type_size )
 
-#define list_add( LIST, VAL )\
+#define list_add( LIST_REF, VAL )\
 	START_DEF\
 	{\
-		list_grow( LIST );\
-		list_set( LIST, LIST->count++, VAL );\
+		_list_ensure_capacity( LIST_REF, LIST_REF->count + 1 );\
+		list_set( LIST_REF, LIST_REF->count++, VAL );\
 	}\
 	END_DEF
 
-#define list_insert( LIST, POS, VAL )\
+#define list_insert( LIST_REF, POS, VAL )\
 	START_DEF\
 	{\
-		list_grow( LIST );\
-		list_move( LIST, ( POS ), ( LIST->count++ ) - ( POS ), 1 );\
-		list_set( LIST, POS, VAL );\
+		_list_ensure_capacity( LIST_REF, LIST_REF->count + 1 );\
+		list_move( LIST_REF, ( POS ), LIST_REF->count++ - ( POS ), 1 );\
+		list_set( LIST_REF, POS, VAL );\
 	}\
 	END_DEF
 
@@ -1362,9 +1402,9 @@ fn list_add_bytes_part( list ref const list_ref, byte const ref const bytes, n4 
 	list_set_count( list_ref, list_ref->count + count );
 	list_copy_bytes( list_ref, old_count, bytes + bytes_position, count * list_ref->type_size );
 }
-#define list_add_bytes( LIST, BYTES, COUNT... ) list_add_bytes_part( LIST, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
-#define list_add_list_part( LIST, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_add_bytes_part( LIST, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
-#define list_add_list( LIST, OTHER_LIST ) list_add_list_part( LIST, OTHER_LIST, 0, OTHER_LIST->count )
+#define list_add_bytes( LIST_REF, BYTES, COUNT... ) list_add_bytes_part( LIST_REF, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_add_list_part( LIST_REF, OTHER_LIST_REF, OTHER_POSITION, OTHER_COUNT ) list_add_bytes_part( LIST_REF, OTHER_LIST_REF->bytes, ( OTHER_POSITION ) * OTHER_LIST_REF->type_size, OTHER_COUNT )
+#define list_add_list( LIST_REF, OTHER_LIST_REF ) list_add_list_part( LIST_REF, OTHER_LIST_REF, 0, OTHER_LIST_REF->count )
 
 fn list_insert_bytes_part( list ref const list_ref, n4 const position, byte const ref const bytes, n4 const bytes_position, n4 const count )
 {
@@ -1373,9 +1413,9 @@ fn list_insert_bytes_part( list ref const list_ref, n4 const position, byte cons
 	list_move( list_ref, position, old_count - position, count );
 	list_copy_bytes( list_ref, position, bytes + bytes_position, count * list_ref->type_size );
 }
-#define list_insert_bytes( LIST, POSITION, BYTES, COUNT... ) list_insert_bytes_part( LIST, POSITION, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
-#define list_insert_list_part( LIST, POSITION, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_insert_bytes_part( LIST, POSITION, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
-#define list_insert_list( LIST, POSITION, OTHER_LIST ) list_insert_list_part( LIST, POSITION, OTHER_LIST, 0, OTHER_LIST->count )
+#define list_insert_bytes( LIST_REF, POSITION, BYTES, COUNT... ) list_insert_bytes_part( LIST_REF, POSITION, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_insert_list_part( LIST_REF, POSITION, OTHER_LIST_REF, OTHER_POSITION, OTHER_COUNT ) list_insert_bytes_part( LIST_REF, POSITION, OTHER_LIST_REF->bytes, ( OTHER_POSITION ) * OTHER_LIST_REF->type_size, OTHER_COUNT )
+#define list_insert_list( LIST_REF, POSITION, OTHER_LIST_REF ) list_insert_list_part( LIST_REF, POSITION, OTHER_LIST_REF, 0, OTHER_LIST_REF->count )
 
 fn list_replace_bytes_part( list ref const list_ref, n4 const position, n4 const replace_count, byte const ref const bytes, n4 const bytes_position, n4 const count )
 {
@@ -1390,9 +1430,9 @@ fn list_replace_bytes_part( list ref const list_ref, n4 const position, n4 const
 		bytes_clear( list_ref->bytes + ( list_ref->count * list_ref->type_size ), ( old_count - list_ref->count ) * list_ref->type_size );
 	}
 }
-#define list_replace_bytes( LIST, POSITION, REPLACE_COUNT, BYTES, COUNT... ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
-#define list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, OTHER_POSITION, OTHER_COUNT ) list_replace_bytes_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST->bytes, ( OTHER_POSITION ) * OTHER_LIST->type_size, OTHER_COUNT )
-#define list_replace_list( LIST, POSITION, REPLACE_COUNT, OTHER_LIST ) list_replace_list_part( LIST, POSITION, REPLACE_COUNT, OTHER_LIST, 0, OTHER_LIST->count )
+#define list_replace_bytes( LIST_REF, POSITION, REPLACE_COUNT, BYTES, COUNT... ) list_replace_bytes_part( LIST_REF, POSITION, REPLACE_COUNT, BYTES, 0, DEFAULT( bytes_measure( BYTES ), COUNT ) )
+#define list_replace_list_part( LIST_REF, POSITION, REPLACE_COUNT, OTHER_LIST_REF, OTHER_POSITION, OTHER_COUNT ) list_replace_bytes_part( LIST_REF, POSITION, REPLACE_COUNT, OTHER_LIST_REF->bytes, ( OTHER_POSITION ) * OTHER_LIST_REF->type_size, OTHER_COUNT )
+#define list_replace_list( LIST_REF, POSITION, REPLACE_COUNT, OTHER_LIST_REF ) list_replace_list_part( LIST_REF, POSITION, REPLACE_COUNT, OTHER_LIST_REF, 0, OTHER_LIST_REF->count )
 
 fn list_delete_part( list ref const list_ref, n4 const position, n4 const delete_count )
 {
@@ -1403,27 +1443,23 @@ fn list_delete_part( list ref const list_ref, n4 const position, n4 const delete
 
 	bytes_clear( list_ref->bytes + ( list_ref->count * list_ref->type_size ), delete_count * list_ref->type_size );
 }
-#define list_delete( LIST, POSITION ) list_delete_part( LIST, POSITION, 1 )
+#define list_delete( LIST_REF, POSITION ) list_delete_part( LIST_REF, POSITION, 1 )
 
-#define list_remove( LIST, TYPE, POSITION )\
-	list_get( LIST, TYPE, POSITION );\
-	list_delete( LIST, POSITION )
+#define list_remove( LIST_REF, TYPE, POSITION )\
+	list_get( LIST_REF, TYPE, POSITION );\
+	list_delete( LIST_REF, POSITION )
 
-#define list_remove_first( LIST, TYPE ) list_remove( LIST, TYPE, 0 )
+#define list_remove_first( LIST_REF, TYPE ) list_remove( LIST_REF, TYPE, 0 )
 
-#define list_remove_last( LIST, TYPE )\
-	list_get( LIST, TYPE, --LIST->count );\
-	bytes_clear( LIST->bytes + ( LIST->count * LIST->type_size ), LIST->type_size )
+#define list_remove_last( LIST_REF, TYPE )\
+	list_get( LIST_REF, TYPE, --LIST_REF->count );\
+	bytes_clear( LIST_REF->bytes + ( LIST_REF->count * LIST_REF->type_size ), LIST_REF->type_size )
 
-#define list_iter( LIST, VAR_NAME )\
-	temp list ref const _LIST_##VAR_NAME = ref_of( LIST );\
-	iter( VAR_NAME, _LIST_##VAR_NAME->count )
+#define list_iter( LIST_REF, VAR_NAME ) iter( VAR_NAME, LIST_REF->count )
 
-#define list_get_iter( VAR_NAME, TYPE ) list_get( val_of( _LIST_##VAR_NAME ), TYPE, VAR_NAME )
-
-#define list_iter_inv( LIST, VAR_NAME )\
-	temp list ref const _LIST_##VAR_NAME = ref_of( LIST );\
-	iter_inv( VAR_NAME, _LIST_##VAR_NAME->count )
+#define list_iter_inv( LIST_REF, VAR_NAME )\
+	temp list ref const _LIST_REF_##VAR_NAME = ref_of( LIST_REF );\
+	iter_inv( VAR_NAME, _LIST_REF_##VAR_NAME->count )
 
 //
 
