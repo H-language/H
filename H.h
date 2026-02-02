@@ -278,6 +278,8 @@
 #define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
 #define type_fn( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
 
+#define call( FN, ARGS... ) if_something( FN ) FN( ARGS )
+
 //
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// flag
