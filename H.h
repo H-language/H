@@ -92,21 +92,15 @@
 
 #define COMPILER_GCC 0
 #define COMPILER_TCC 0
-#define COMPILER_CLANG 0
 #define COMPILER_MSVC 0
 #define COMPILER_UNKNOWN 0
 
-#if defined( __clang__ )
-	#undef COMPILER_CLANG
-	#define COMPILER_CLANG 1
-	#define COMPILER_NAME "Clang"
-
-#elif defined( __TINYC__ )
+#if defined( __TINYC__ )
 	#undef COMPILER_TCC
 	#define COMPILER_TCC 1
 	#define COMPILER_NAME "TCC"
 
-#elif defined( __GNUC__ )
+#elif defined( __GNUC__ ) || defined( __clang__ )
 	#undef COMPILER_GCC
 	#define COMPILER_GCC 1
 	#define COMPILER_NAME "GCC"
@@ -1288,8 +1282,7 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-#if OS_WINDOWS and COMPILER_TCC
-	//#if 1
+#if (OS_WINDOWS and COMPILER_TCC) or (OS_LINUX and COMPILER_GCC)
 	fn sincosf( r4 const x, r4 ref const sin_x, r4 ref const cos_x )
 	{
 		val_of( sin_x ) = r4_sin( x );
