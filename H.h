@@ -305,9 +305,9 @@ type_from( _Bool ) flag;
 #define is_even mod 2 is 0
 #define is_odd mod 2 isnt 0
 
-#define pick( IF_YES, THEN_THIS, ELSE_THIS ) ( ( IF_YES ) ? ( THEN_THIS ) : ( ELSE_THIS ) )
-#define PICK_0( THEN_THIS, ELSE_THIS ) ELSE_THIS
-#define PICK_1( THEN_THIS, ELSE_THIS ) THEN_THIS
+#define pick( IF_YES, THEN_THIS, ELSE_THIS... ) ( ( IF_YES ) ? ( THEN_THIS ) : ( ELSE_THIS ) )
+#define PICK_0( THEN_THIS, ELSE_THIS... ) ELSE_THIS
+#define PICK_1( THEN_THIS, ELSE_THIS... ) THEN_THIS
 #define PICK( IF_1, THEN_THIS, ELSE_THIS... ) JOIN( PICK_, IF_1 ) ( THEN_THIS, ELSE_THIS )
 
 #define if_nothing( ARG... ) if( ARG is nothing )
@@ -610,7 +610,6 @@ embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const
 }
 #define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
 */
-
 #define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
 
 embed anon ref _alloc( n8 const size )
