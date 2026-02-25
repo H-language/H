@@ -677,7 +677,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 // group
 
 #define group( NAME, TYPE... )\
-	type_from( DEFAULT( byte, TYPE ) ) NAME;\
+	type_from( DEFAULT( n1, TYPE ) ) NAME;\
 	enum NAME
 
 ////////////////////////////////
