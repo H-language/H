@@ -122,98 +122,98 @@
 /// magic macros
 //
 
-#define _EVAL( ARGS... ) ARGS
-#define EVAL( ARGS... ) _EVAL( ARGS )
+#define _EVAL( INPUTS... ) INPUTS
+#define EVAL( INPUTS... ) _EVAL( INPUTS )
 #define _JOIN( A, B... ) A##B
 #define JOIN( A, B... ) _JOIN( A, B )
 
-#define SKIP_ARG( _, ARGS... ) ARGS
+#define SKIP_INPUT( _, INPUTS... ) INPUTS
 
-#define GET_ARG0( ... )
-#define GET_ARG1( a, ... ) a
-#define GET_ARG2( a, b, ... ) b
-#define GET_ARG3( a, b, c, ... ) c
-#define GET_ARG4( a, b, c, d, ... ) d
-#define GET_ARG5( a, b, c, d, e, ... ) e
-#define GET_ARG6( a, b, c, d, e, f, ... ) f
-#define GET_ARG7( a, b, c, d, e, f, g, ... ) g
-#define GET_ARG8( a, b, c, d, e, f, g, h, ... ) h
-#define GET_ARG9( a, b, c, d, e, f, g, h, i, ... ) i
-#define GET_ARG10( a, b, c, d, e, f, g, h, i, j, ... ) j
-#define GET_ARG11( a, b, c, d, e, f, g, h, i, j, k, ... ) k
-#define GET_ARG12( a, b, c, d, e, f, g, h, i, j, k, l, ... ) l
-#define GET_ARG13( a, b, c, d, e, f, g, h, i, j, k, l, m, ... ) m
-#define GET_ARG14( a, b, c, d, e, f, g, h, i, j, k, l, m, n, ... ) n
-#define GET_ARG15( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, ... ) o
-#define GET_ARG16( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, ... ) p
-#define GET_ARG17( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, ... ) q
+#define GET_INPUT0( ... )
+#define GET_INPUT1( a, ... ) a
+#define GET_INPUT2( a, b, ... ) b
+#define GET_INPUT3( a, b, c, ... ) c
+#define GET_INPUT4( a, b, c, d, ... ) d
+#define GET_INPUT5( a, b, c, d, e, ... ) e
+#define GET_INPUT6( a, b, c, d, e, f, ... ) f
+#define GET_INPUT7( a, b, c, d, e, f, g, ... ) g
+#define GET_INPUT8( a, b, c, d, e, f, g, h, ... ) h
+#define GET_INPUT9( a, b, c, d, e, f, g, h, i, ... ) i
+#define GET_INPUT10( a, b, c, d, e, f, g, h, i, j, ... ) j
+#define GET_INPUT11( a, b, c, d, e, f, g, h, i, j, k, ... ) k
+#define GET_INPUT12( a, b, c, d, e, f, g, h, i, j, k, l, ... ) l
+#define GET_INPUT13( a, b, c, d, e, f, g, h, i, j, k, l, m, ... ) m
+#define GET_INPUT14( a, b, c, d, e, f, g, h, i, j, k, l, m, n, ... ) n
+#define GET_INPUT15( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, ... ) o
+#define GET_INPUT16( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, ... ) p
+#define GET_INPUT17( a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, ... ) q
 
 #define COMMA ,
 
-#define _PASTE_IF_ARGS_EVAL( CODE, ARGS... ) GET_ARG2( ARGS, EVAL CODE )
-#define _PASTE_IF_ARGS( CODE, ARGS... ) _PASTE_IF_ARGS_EVAL( CODE, GET_ARG1 ARGS( COMMA ) )
-#define PASTE_IF_ARGS( CODE, ARGS... ) _PASTE_IF_ARGS( ( CODE ), GET_ARG1( ARGS ) )
+#define _PASTE_IF_INPUTS_EVAL( CODE, INPUTS... ) GET_INPUT2( INPUTS, EVAL CODE )
+#define _PASTE_IF_INPUTS( CODE, INPUTS... ) _PASTE_IF_INPUTS_EVAL( CODE, GET_INPUT1 INPUTS( COMMA ) )
+#define PASTE_IF_INPUTS( CODE, INPUTS... ) _PASTE_IF_INPUTS( ( CODE ), GET_INPUT1( INPUTS ) )
 
-#define COMMA_IF_ARGS( ARGS... ) PASTE_IF_ARGS( COMMA, ARGS )
+#define COMMA_IF_INPUTS( INPUTS... ) PASTE_IF_INPUTS( COMMA, INPUTS )
 
-#define _COUNT_ARGS_EVAL( ARGS... ) GET_ARG17( ARGS, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 )
-#define COUNT_ARGS( ARGS... ) _COUNT_ARGS_EVAL( ARGS COMMA_IF_ARGS( ARGS ) 16 )
+#define _COUNT_INPUTS_EVAL( INPUTS... ) GET_INPUT17( INPUTS, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 )
+#define COUNT_INPUTS( INPUTS... ) _COUNT_INPUTS_EVAL( INPUTS COMMA_IF_INPUTS( INPUTS ) 16 )
 
 #define _AS_BYTES( VALUE ) #VALUE
 #define AS_BYTES( VALUE ) _AS_BYTES( VALUE )
 
 ////////////////////////////////
-// default arguments
+// default inputs
 
-#define _DEFAULT_EVAL( ARGS... ) GET_ARG1( ARGS )
-#define DEFAULT( DEF, ARGS... ) _DEFAULT_EVAL( ARGS COMMA_IF_ARGS( ARGS ) DEF )
+#define _DEFAULT_EVAL( INPUTS... ) GET_INPUT1( INPUTS )
+#define DEFAULT( DEF, INPUTS... ) _DEFAULT_EVAL( INPUTS COMMA_IF_INPUTS( INPUTS ) DEF )
 #define _DEFAULTS_0( DEFS, ... )
-#define _DEFAULTS_1( DEFS, ARGS... ) DEFAULT( GET_ARG1 DEFS, ARGS )
-#define _DEFAULTS_2( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_1( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_3( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_2( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_4( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_3( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_5( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_4( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_6( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_5( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_7( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_6( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_8( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_7( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_9( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_8( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_10( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_9( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_11( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_10( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_12( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_11( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_13( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_12( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_14( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_13( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_15( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_14( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_16( DEFS, ARGS... ) _DEFAULTS_1( DEFS, ARGS ) , _DEFAULTS_15( ( SKIP_ARG DEFS ), SKIP_ARG( ARGS ) )
-#define _DEFAULTS_MAKE( COUNT, DEFS, ARGS... ) JOIN( _DEFAULTS_, COUNT ) ( DEFS, ARGS )
-#define DEFAULTS( DEFS, ARGS... ) _DEFAULTS_MAKE( COUNT_ARGS DEFS, DEFS, ARGS )
+#define _DEFAULTS_1( DEFS, INPUTS... ) DEFAULT( GET_INPUT1 DEFS, INPUTS )
+#define _DEFAULTS_2( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_1( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_3( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_2( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_4( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_3( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_5( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_4( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_6( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_5( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_7( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_6( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_8( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_7( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_9( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_8( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_10( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_9( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_11( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_10( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_12( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_11( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_13( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_12( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_14( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_13( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_15( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_14( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_16( DEFS, INPUTS... ) _DEFAULTS_1( DEFS, INPUTS ) , _DEFAULTS_15( ( SKIP_INPUT DEFS ), SKIP_INPUT( INPUTS ) )
+#define _DEFAULTS_MAKE( COUNT, DEFS, INPUTS... ) JOIN( _DEFAULTS_, COUNT ) ( DEFS, INPUTS )
+#define DEFAULTS( DEFS, INPUTS... ) _DEFAULTS_MAKE( COUNT_INPUTS DEFS, DEFS, INPUTS )
 
 ////////////////////////////////
 // symbol chains
 
-#define _CHAIN_0( MODE, L, R, MID, ARGS... ) ARGS
-#define _CHAIN_1_EMPTY( L, R, MID, ARG ) L ARG R
-#define _CHAIN_1_PAREN( L, R, MID, ARG ) ( L ARG R )
-#define _CHAIN_1( MODE, L, R, MID, ARG ) _CHAIN_1_##MODE( L, R, MID, ARG )
-#define _CHAIN_JOIN( MODE, L, R, MID, ARG, NEXT ) _CHAIN_1( MODE, L, R, MID, ARG ) MID NEXT
-#define _CHAIN_2( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_1( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_3( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_2( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_4( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_3( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_5( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_4( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_6( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_5( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_7( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_6( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_8( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_7( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_9( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_8( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_10( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_9( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_11( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_10( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_12( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_11( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_13( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_12( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_14( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_13( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_15( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_14( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_16( MODE, L, R, MID, ARG, ARGS... ) _CHAIN_JOIN( MODE, L, R, MID, ARG, _CHAIN_15( MODE, L, R, MID, ARGS ) )
-#define _CHAIN_MAKE( COUNT, MODE, L, R, MID, ARGS... ) JOIN( _CHAIN_, COUNT ) ( MODE, L, R, MID, ARGS )
+#define _CHAIN_0( MODE, L, R, MID, INPUTS... ) INPUTS
+#define _CHAIN_1_EMPTY( L, R, MID, INPUT ) L INPUT R
+#define _CHAIN_1_PAREN( L, R, MID, INPUT ) ( L INPUT R )
+#define _CHAIN_1( MODE, L, R, MID, INPUT ) _CHAIN_1_##MODE( L, R, MID, INPUT )
+#define _CHAIN_JOIN( MODE, L, R, MID, INPUT, NEXT ) _CHAIN_1( MODE, L, R, MID, INPUT ) MID NEXT
+#define _CHAIN_2( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_1( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_3( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_2( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_4( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_3( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_5( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_4( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_6( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_5( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_7( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_6( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_8( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_7( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_9( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_8( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_10( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_9( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_11( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_10( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_12( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_11( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_13( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_12( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_14( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_13( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_15( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_14( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_16( MODE, L, R, MID, INPUT, INPUTS... ) _CHAIN_JOIN( MODE, L, R, MID, INPUT, _CHAIN_15( MODE, L, R, MID, INPUTS ) )
+#define _CHAIN_MAKE( COUNT, MODE, L, R, MID, INPUTS... ) JOIN( _CHAIN_, COUNT ) ( MODE, L, R, MID, INPUTS )
 
-#define CHAIN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), EMPTY, L, R, MID, ARGS )
-#define CHAIN_PAREN( L, R, MID, ARGS... ) _CHAIN_MAKE( COUNT_ARGS( ARGS ), PAREN, L, R, MID, ARGS )
+#define CHAIN( L, R, MID, INPUTS... ) _CHAIN_MAKE( COUNT_INPUTS( INPUTS ), EMPTY, L, R, MID, INPUTS )
+#define CHAIN_PAREN( L, R, MID, INPUTS... ) _CHAIN_MAKE( COUNT_INPUTS( INPUTS ), PAREN, L, R, MID, INPUTS )
 
 ////////////////////////////////
 // scoped define
@@ -269,10 +269,10 @@
 #define fn embed anon
 #define out return
 
-#define fn_ref( OUTPUT, NAME, ARG_TYPES... ) OUTPUT( ref NAME ) ( ARG_TYPES )
-#define type_fn( OUTPUT, ARG_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, ARG_TYPES ) ) )
+#define fn_ref( OUTPUT, NAME, INPUT_TYPES... ) OUTPUT( ref NAME ) ( INPUT_TYPES )
+#define type_fn( OUTPUT, INPUT_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, INPUT_TYPES ) ) )
 
-#define call( FN, ARGS... ) if_something( FN ) FN( ARGS )
+#define call( FN, INPUTS... ) if_something( FN ) FN( INPUTS )
 
 //
 
@@ -281,7 +281,7 @@
 //
 
 type_from( _Bool ) flag;
-#define flag( ARGS... ) to( flag, !! ( ARGS ) )
+#define flag( INPUTS... ) to( flag, !! ( INPUTS ) )
 #define yes 1
 #define no 0
 #define flip( FLAG ) FLAG ^= 1
@@ -303,19 +303,20 @@ type_from( _Bool ) flag;
 #define PICK_0( THEN_THIS, ELSE_THIS... ) ELSE_THIS
 #define PICK_1( THEN_THIS, ELSE_THIS... ) THEN_THIS
 #define PICK( IF_1, THEN_THIS, ELSE_THIS... ) JOIN( PICK_, IF_1 ) ( THEN_THIS, ELSE_THIS )
+#define OS_PICK( LINUX, WINDOWS ) PICK( OS_LINUX, LINUX, WINDOWS )
 
-#define if_nothing( ARG... ) if( ARG is nothing )
-#define if_something( ARG... ) if( ARG isnt nothing )
+#define if_nothing( INPUT... ) if( INPUT is nothing )
+#define if_something( INPUT... ) if( INPUT isnt nothing )
 
-#define any( ARGS... ) ( CHAIN_PAREN(,, or, ARGS ) )
-#define all( ARGS... ) ( CHAIN_PAREN(,, and, ARGS ) )
-#define none( ARGS... ) ( not any( ARGS ) )
-#define not_all( ARGS... ) ( not all( ARGS ) )
+#define any( INPUTS... ) ( CHAIN_PAREN(,, or, INPUTS ) )
+#define all( INPUTS... ) ( CHAIN_PAREN(,, and, INPUTS ) )
+#define none( INPUTS... ) ( not any( INPUTS ) )
+#define not_all( INPUTS... ) ( not all( INPUTS ) )
 
-#define if_any( ARGS... ) if any( ARGS )
-#define if_all( ARGS... ) if all( ARGS )
-#define if_none( ARGS... ) if none( ARGS )
-#define if_not_all( ARGS... ) if not_all( ARGS )
+#define if_any( INPUTS... ) if any( INPUTS )
+#define if_all( INPUTS... ) if all( INPUTS )
+#define if_none( INPUTS... ) if none( INPUTS )
+#define if_not_all( INPUTS... ) if not_all( INPUTS )
 
 //
 
@@ -327,7 +328,7 @@ type_from( _Bool ) flag;
 #define next continue
 #define skip break
 #define jump goto
-#define until( ARGS... ) while( not( ARGS ) )
+#define until( INPUTS... ) while( not( INPUTS ) )
 
 //
 
@@ -336,7 +337,7 @@ type_from( _Bool ) flag;
 //
 
 #define with switch
-#define when( ARGS... ) CHAIN( case, :,, ARGS )
+#define when( INPUTS... ) CHAIN( case, :,, INPUTS )
 #define other default:
 
 //
@@ -383,42 +384,42 @@ type_from( _Bool ) flag;
 /// conditionals
 //
 
-#define while_any( ARGS... ) while any( ARGS )
-#define while_all( ARGS... ) while all( ARGS )
-#define while_none( ARGS... ) while none( ARGS )
-#define while_not_all( ARGS... ) while not_all( ARGS )
+#define while_any( INPUTS... ) while any( INPUTS )
+#define while_all( INPUTS... ) while all( INPUTS )
+#define while_none( INPUTS... ) while none( INPUTS )
+#define while_not_all( INPUTS... ) while not_all( INPUTS )
 
-#define skip_if( ARG... ) if( ARG ) skip
-#define skip_if_nothing( ARG... ) if_nothing( ARG ) skip
-#define skip_if_something( ARG... ) if_something( ARG ) skip
-#define skip_if_any( ARGS... ) if_any( ARGS ) skip
-#define skip_if_all( ARGS... ) if_all( ARGS ) skip
-#define skip_if_none( ARGS... ) if_none( ARGS ) skip
-#define skip_if_not_all( ARGS... ) if_not_all( ARGS ) skip
+#define skip_if( INPUT... ) if( INPUT ) skip
+#define skip_if_nothing( INPUT... ) if_nothing( INPUT ) skip
+#define skip_if_something( INPUT... ) if_something( INPUT ) skip
+#define skip_if_any( INPUTS... ) if_any( INPUTS ) skip
+#define skip_if_all( INPUTS... ) if_all( INPUTS ) skip
+#define skip_if_none( INPUTS... ) if_none( INPUTS ) skip
+#define skip_if_not_all( INPUTS... ) if_not_all( INPUTS ) skip
 
-#define jump_if( ARG... ) if( ARG ) jump
-#define jump_if_nothing( ARG... ) if_nothing( ARG ) jump
-#define jump_if_something( ARG... ) if_something( ARG ) jump
-#define jump_if_any( ARGS... ) if_any( ARGS ) jump
-#define jump_if_all( ARGS... ) if_all( ARGS ) jump
-#define jump_if_none( ARGS... ) if_none( ARGS ) jump
-#define jump_if_not_all( ARGS... ) if_not_all( ARGS ) jump
+#define jump_if( INPUT... ) if( INPUT ) jump
+#define jump_if_nothing( INPUT... ) if_nothing( INPUT ) jump
+#define jump_if_something( INPUT... ) if_something( INPUT ) jump
+#define jump_if_any( INPUTS... ) if_any( INPUTS ) jump
+#define jump_if_all( INPUTS... ) if_all( INPUTS ) jump
+#define jump_if_none( INPUTS... ) if_none( INPUTS ) jump
+#define jump_if_not_all( INPUTS... ) if_not_all( INPUTS ) jump
 
-#define next_if( ARG... ) if( ARG ) next
-#define next_if_nothing( ARG... ) if_nothing( ARG ) next
-#define next_if_something( ARG... ) if_something( ARG ) next
-#define next_if_any( ARGS... ) if_any( ARGS ) next
-#define next_if_all( ARGS... ) if_all( ARGS ) next
-#define next_if_none( ARGS... ) if_none( ARGS ) next
-#define next_if_not_all( ARGS... ) if_not_all( ARGS ) next
+#define next_if( INPUT... ) if( INPUT ) next
+#define next_if_nothing( INPUT... ) if_nothing( INPUT ) next
+#define next_if_something( INPUT... ) if_something( INPUT ) next
+#define next_if_any( INPUTS... ) if_any( INPUTS ) next
+#define next_if_all( INPUTS... ) if_all( INPUTS ) next
+#define next_if_none( INPUTS... ) if_none( INPUTS ) next
+#define next_if_not_all( INPUTS... ) if_not_all( INPUTS ) next
 
-#define out_if( ARG... ) if( ARG ) out
-#define out_if_nothing( ARG... ) if_nothing( ARG ) out
-#define out_if_something( ARG... ) if_something( ARG ) out
-#define out_if_any( ARGS... ) if_any( ARGS ) out
-#define out_if_all( ARGS... ) if_all( ARGS ) out
-#define out_if_none( ARGS... ) if_none( ARGS ) out
-#define out_if_not_all( ARGS... ) if_not_all( ARGS ) out
+#define out_if( INPUT... ) if( INPUT ) out
+#define out_if_nothing( INPUT... ) if_nothing( INPUT ) out
+#define out_if_something( INPUT... ) if_something( INPUT ) out
+#define out_if_any( INPUTS... ) if_any( INPUTS ) out
+#define out_if_all( INPUTS... ) if_all( INPUTS ) out
+#define out_if_none( INPUTS... ) if_none( INPUTS ) out
+#define out_if_not_all( INPUTS... ) if_not_all( INPUTS ) out
 
 //
 
@@ -441,35 +442,35 @@ type_from( char ) byte;
 // 1 byte
 type_from( uint8_t ) n1;
 #define n1( VAL ) to( n1, VAL )
-#define min_n1 0
-#define max_n1 UINT8_MAX
+#define n1_min_val 0
+#define n1_max_val UINT8_MAX
 //
 type_from( int8_t ) i1;
 #define i1( VAL ) to( i1, VAL )
-#define min_i1 INT8_MIN
-#define max_i1 INT8_MAX
+#define i1_min_val INT8_MIN
+#define i1_max_val INT8_MAX
 
 // 2 bytes
 type_from( uint16_t ) n2;
 #define n2( VAL ) to( n2, VAL )
-#define min_n2 0
-#define max_n2 UINT16_MAX
+#define n2_min_val 0
+#define n2_max_val UINT16_MAX
 //
 type_from( int16_t ) i2;
 #define i2( VAL ) to( i2, VAL )
-#define min_i2 INT16_MIN
-#define max_i2 INT16_MAX
+#define i2_min_val INT16_MIN
+#define i2_max_val INT16_MAX
 
 // 4 bytes
 type_from( uint32_t ) n4;
 #define n4( VAL ) to( n4, VAL )
-#define min_n4 0
-#define max_n4 UINT32_MAX
+#define n4_min_val 0
+#define n4_max_val UINT32_MAX
 //
 type_from( int32_t ) i4;
 #define i4( VAL ) to( i4, VAL )
-#define min_i4 INT32_MIN
-#define max_i4 INT32_MAX
+#define i4_min_val INT32_MIN
+#define i4_max_val INT32_MAX
 //
 type_from( float ) r4;
 #define r4( VAL ) to( r4, VAL )
@@ -477,13 +478,13 @@ type_from( float ) r4;
 // 8 bytes
 type_from( uint64_t ) n8;
 #define n8( VAL ) to( n8, VAL )
-#define min_n8 0
-#define max_n8 UINT64_MAX
+#define n8_min_val 0
+#define n8_max_val UINT64_MAX
 //
 type_from( int64_t ) i8;
 #define i8( VAL ) to( i8, VAL )
-#define min_i8 INT64_MIN
-#define max_i8 INT64_MAX
+#define i8_min_val INT64_MIN
+#define i8_max_val INT64_MAX
 //
 type_from( double ) r8;
 #define r8( VAL ) to( r8, VAL )
@@ -501,28 +502,28 @@ type_from( i4 ) out_state;
 
 //
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn args
-/// fn args
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn inputs
+/// fn inputs
 //
 
-#define arg_list va_list
-#define args_init( ARG_LIST_REF, BEFORE_ELLIPSIS ) va_start( ARG_LIST_REF, BEFORE_ELLIPSIS )
-#define args_end( ARG_LIST_REF ) va_end( ARG_LIST_REF )
-#define args_copy( FROM, TO ) va_copy( TO, FROM )
+#define input_list va_list
+#define inputs_init( INPUT_LIST_REF, BEFORE_ELLIPSIS ) va_start( INPUT_LIST_REF, BEFORE_ELLIPSIS )
+#define inputs_end( INPUT_LIST_REF ) va_end( INPUT_LIST_REF )
+#define inputs_copy( FROM, TO ) va_copy( TO, FROM )
 
-#define _args_next_byte int
-#define _args_next_n1 unsigned int
-#define _args_next_i1 signed int
-#define _args_next_n2 unsigned int
-#define _args_next_i2 signed int
-#define _args_next_n4 unsigned int
-#define _args_next_i4 signed int
-#define _args_next_r4 double
-#define _args_next_n8 unsigned long long
-#define _args_next_i8 signed long long
-#define _args_next_r8 double
-#define _args_next_ref long ref
-#define args_next( ARGS, TYPE ) va_arg( ARGS, _args_next_##TYPE )
+#define _inputs_next_byte int
+#define _inputs_next_n1 unsigned int
+#define _inputs_next_i1 signed int
+#define _inputs_next_n2 unsigned int
+#define _inputs_next_i2 signed int
+#define _inputs_next_n4 unsigned int
+#define _inputs_next_i4 signed int
+#define _inputs_next_r4 double
+#define _inputs_next_n8 unsigned long long
+#define _inputs_next_i8 signed long long
+#define _inputs_next_r8 double
+#define _inputs_next_ref long ref
+#define inputs_next( INPUTS, TYPE ) va_arg( INPUTS, _inputs_next_##TYPE )
 
 //
 
@@ -555,7 +556,9 @@ type_from( i4 ) out_state;
 #define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
 #define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
 #define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
+#define bytes_match( A, B, AMOUNT ) ( bytes_compare( A, B, AMOUNT ) is 0 )
 #define bytes_measure( REF ) strlen( REF )
+#define bytes_find( BYTES, BYTE, MAX_SIZE ) memchr( BYTES, BYTE, MAX_SIZE )
 #define bytes_end( BYTES ) val_of( BYTES ) = eof_byte
 
 ////////////////////////////////
@@ -666,6 +669,8 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
 
+#define wipe( VAL ) VAL = make( type_of( VAL ) )
+
 ////////////////////////////////
 // fusion
 
@@ -677,8 +682,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 // group
 
 #define group( NAME, TYPE... )\
-	type_from( DEFAULT( n1, TYPE ) ) NAME;\
-	enum NAME
+	PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum NAME
 
 ////////////////////////////////
 /// byte conversion
@@ -941,8 +945,8 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 #define newline "\n"
 #define newline_byte '\n'
 
-#define separator PICK( OS_LINUX, "/", "\\" )
-#define separator_byte PICK( OS_LINUX, '/', '\\' )
+#define separator OS_PICK( "/", "\\" )
+#define separator_byte OS_PICK( '/', '\\' )
 
 #define tab "\t"
 #define tab_byte '\t'
@@ -1047,7 +1051,7 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 
 #define print_reset_format() print_set_format( reset )
 
-#define print_clear() system( PICK( OS_WINDOWS, "cls", "clear" ) )
+#define print_clear() system( OS_PICK( "clear", "cls" ) )
 
 //
 
@@ -1282,7 +1286,7 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-#if (OS_WINDOWS and COMPILER_TCC) or (OS_LINUX and COMPILER_GCC)
+#if( OS_WINDOWS and COMPILER_TCC ) or( OS_LINUX and COMPILER_GCC )
 	fn sincosf( r4 const x, r4 ref const sin_x, r4 ref const cos_x )
 	{
 		val_of( sin_x ) = r4_sin( x );
@@ -1326,7 +1330,7 @@ embed byte const ref const get_os_input()
 /// OS path
 //
 
-#define max_path_size 260
+#define path_max_size 260
 
 #define path( FOLDERS... ) CHAIN(,, separator, FOLDERS )
 
@@ -1355,11 +1359,11 @@ embed byte ref const path_get_extension( byte ref const path )
 
 embed byte ref get_exe_path()
 {
-	perm byte exe_path[ max_path_size ] = "";
+	perm byte exe_path[ path_max_size ] = "";
 	#if OS_LINUX
-		temp i8 _s = readlink( "/proc/self/exe", exe_path, max_path_size );
+		temp i8 _s = readlink( "/proc/self/exe", exe_path, path_max_size );
 	#elif OS_WINDOWS
-		GetModuleFileNameA( nothing, exe_path, max_path_size );
+		GetModuleFileNameA( nothing, exe_path, path_max_size );
 	#endif
 	out exe_path;
 }
@@ -1380,12 +1384,12 @@ group( entry_type )
 	entry_any
 };
 
-embed n2 get_entries( byte const ref const folder_path, byte entries[][ max_path_size ], n2 const max_entries, entry_type const type, flag const folder_separator )
+embed n2 get_entries( byte const ref const folder_path, byte entries[][ path_max_size ], n2 const max_entries, entry_type const type, flag const folder_separator )
 {
 	temp n2 count = 0;
 	temp n2 len = bytes_measure( folder_path );
-	perm byte path[ max_path_size ];
-	bytes_clear( path, max_path_size );
+	perm byte path[ path_max_size ];
+	bytes_clear( path, path_max_size );
 	anon ref handle;
 	bytes_copy( path, folder_path, len );
 
@@ -1501,7 +1505,7 @@ embed flag file_exists( byte const ref const path )
 
 type( file )
 {
-	byte path[ max_path_size ];
+	byte path[ path_max_size ];
 	n2 path_size;
 	os_file_handle handle;
 	byte ref mapped_bytes;
@@ -1672,7 +1676,7 @@ fn delete_file( const byte ref const path )
 /// thread
 //
 
-type_from( PICK( OS_LINUX, pthread_t, HANDLE ) ) thread_id;
+type_from( OS_PICK( pthread_t, HANDLE ) ) thread_id;
 
 type( thread );
 type_fn( anon ref, anon ref const ) thread_fn;
@@ -1704,7 +1708,7 @@ embed thread _start_thread( thread_fn function, anon ref ref_param )
 	#define wait_for_thread( THREAD ) WaitForSingleObject( THREAD.id, INFINITE )
 #endif
 
-type_from( PICK( OS_LINUX, pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
+type_from( OS_PICK( pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
 
 #if OS_LINUX
 	#define lock_thread( LOCK ) pthread_mutex_lock( ref_of( LOCK ) )
