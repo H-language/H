@@ -592,44 +592,33 @@ type_from( i4 ) out_state;
 /// allocated ref
 //
 
-/*
-#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, calloc( DEFAULT( 1, AMOUNT ), size_of( TYPE ) ) )
-#define delete_ref( REF ) if_something( REF ) free( REF )
-
-embed anon ref const _ref_resize( anon ref const r, n8 const type_size, n8 const old_count, n8 const new_count )
-{
-	temp anon ref const new_ptr = realloc( r, type_size * new_count );
-	if( new_ptr isnt nothing and new_count > old_count )
-	{
-		bytes_clear( to( byte ref, new_ptr ) + ( type_size * old_count ), type_size * ( new_count - old_count ) );
-	}
-	out new_ptr;
-}
-#define ref_resize( REF, OLD_COUNT, NEW_COUNT ) _ref_resize( REF, size_of( type_of_ref( REF ) ), OLD_COUNT, NEW_COUNT )
-*/
 #define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
 
 embed anon ref _alloc( n8 const size )
 {
 	#if OS_LINUX
-		temp anon ref const p = mmap( nothing, _alloc_page_round( size ), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
-		out pick( p is MAP_FAILED, nothing, p );
+		temp n8 const total = size + size_of( n8 );
+		temp anon ref const p = mmap( nothing, _alloc_page_round( total ), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+		out_if( p is MAP_FAILED ) nothing;
+		val_of( to( n8 ref, p ) ) = size;
+		out to( anon ref, to( n1 ref, p ) + size_of( n8 ) );
 	#elif OS_WINDOWS
 		out VirtualAlloc( nothing, _alloc_page_round( size ), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
 	#endif
 }
 
-fn _free( anon ref const r, n8 const size )
+fn _free( anon ref const r )
 {
 	#if OS_LINUX
-		munmap( r, _alloc_page_round( size ) );
+		temp n1 ref const base = to( n1 ref, r ) - size_of( n8 );
+		munmap( base, _alloc_page_round( val_of( to( n8 ref, base ) ) + size_of( n8 ) ) );
 	#elif OS_WINDOWS
 		VirtualFree( r, 0, MEM_RELEASE );
 	#endif
 }
 
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
-#define delete_ref( REF, SIZE ) if_something( REF ) _free( REF, SIZE )
+#define delete_ref( REF ) if_something( REF ) _free( REF )
 
 embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const new_size )
 {
@@ -638,12 +627,11 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 	if_something( r )
 	{
 		bytes_copy( p, r, pick( old_size < new_size, old_size, new_size ) );
-		_free( r, old_size );
+		_free( r );
 	}
 	out p;
 }
 #define ref_resize( REF, OLD_SIZE, NEW_SIZE ) to( type_of( REF ), _ref_resize( REF, OLD_SIZE, NEW_SIZE ) )
-
 //
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// declare types
