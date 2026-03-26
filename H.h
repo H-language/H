@@ -1716,7 +1716,7 @@ type_from( OS_PICK( pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
 /// start
 //
 
-#define _main_fn out_state main( i4 const start_parameters_count, byte const ref const ref const start_parameters )
+#define _main_fn out_state main( i4 const start_inputs_count, byte const ref const ref const start_inputs )
 #define start _main_fn
 
 //
