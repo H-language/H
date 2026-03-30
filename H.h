@@ -10,113 +10,6 @@
 //
 
 #pragma once
-#define HYDROGEN
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// dependencies
-/// dependencies
-//
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// version
-/// version
-//
-
-#define H_VERSION_MAJOR 0
-#define H_VERSION_MINOR 1
-#define H_VERSION_PATCH 0
-#define H_VERSION AS_BYTES( H_VERSION_MAJOR ) "." AS_BYTES( H_VERSION_MINOR ) "." AS_BYTES( H_VERSION_PATCH )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS
-/// OS
-//
-
-#define OS_LINUX 0
-#define OS_WINDOWS 0
-#define OS_MACOS 0
-#define OS_UNKNOWN 0
-
-#if defined( __linux__ )
-	#undef OS_LINUX
-	#define OS_LINUX 1
-	#define OS_NAME "Linux"
-	#if __BYTE_ORDER == __LITTLE_ENDIAN
-		#define IS_BIG_ENDIAN 0
-	#elif __BYTE_ORDER == __BIG_ENDIAN
-		#define IS_BIG_ENDIAN 1
-	#endif
-	#include <sys/stat.h>
-	#include <sys/mman.h>
-	#include <dirent.h>
-	#include <time.h>
-	#include <fcntl.h>
-	#include <pthread.h>
-	#include <unistd.h>
-
-#elif defined( _WIN32 )
-	#undef OS_WINDOWS
-	#define OS_WINDOWS 1
-	#define OS_NAME "Windows"
-	#define IS_BIG_ENDIAN 0
-	#undef UNICODE
-	#define WIN32_LEAN_AND_MEAN
-	#define NOMINMAX
-	#include <windows.h>
-
-#elif defined( __APPLE__ )
-	#undef OS_MACOS
-	#define OS_MACOS 1
-	#define OS_NAME "macOS"
-	#define IS_BIG_ENDIAN 0
-
-#else
-	#undef OS_UNKNOWN
-	#define OS_UNKNOWN 1
-	#define OS_NAME "unknown"
-#endif
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// compiler
-/// compiler
-//
-
-#define COMPILER_GCC 0
-#define COMPILER_TCC 0
-#define COMPILER_MSVC 0
-#define COMPILER_UNKNOWN 0
-
-#if defined( __TINYC__ )
-	#undef COMPILER_TCC
-	#define COMPILER_TCC 1
-	#define COMPILER_NAME "TCC"
-
-#elif defined( __GNUC__ ) || defined( __clang__ )
-	#undef COMPILER_GCC
-	#define COMPILER_GCC 1
-	#define COMPILER_NAME "GCC"
-
-#elif defined( _MSC_VER )
-	#undef COMPILER_MSVC
-	#define COMPILER_MSVC 1
-	#define COMPILER_NAME "MSVC"
-
-#else
-	#undef COMPILER_UNKNOWN
-	#define COMPILER_UNKNOWN 1
-	#define COMPILER_NAME "unknown"
-#endif
-
-//
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// magic macros
 /// magic macros
@@ -225,6 +118,101 @@
 
 //
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// dependencies
+/// dependencies
+//
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// version
+/// version
+//
+
+#define H_NAME "H"
+#define H_VERSION_MAJOR 0
+#define H_VERSION_MINOR 1
+#define H_VERSION_PATCH 0
+#define H_VERSION AS_BYTES( H_VERSION_MAJOR ) "." AS_BYTES( H_VERSION_MINOR ) "." AS_BYTES( H_VERSION_PATCH )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS
+/// OS
+//
+
+#define OS_LINUX 0
+#define OS_WINDOWS 0
+#define OS_MACOS 0
+#define OS_UNKNOWN 0
+
+#if defined( __linux__ )
+	#undef OS_LINUX
+	#define OS_LINUX 1
+	#define OS_NAME "Linux"
+	#include <sys/stat.h>
+	#include <sys/mman.h>
+	#include <dirent.h>
+	#include <time.h>
+	#include <fcntl.h>
+	#include <pthread.h>
+	#include <unistd.h>
+
+#elif defined( _WIN32 )
+	#undef OS_WINDOWS
+	#define OS_WINDOWS 1
+	#define OS_NAME "Windows"
+	#undef UNICODE
+	#define WIN32_LEAN_AND_MEAN
+	#define NOMINMAX
+	#include <windows.h>
+
+#elif defined( __APPLE__ )
+	#undef OS_MACOS
+	#define OS_MACOS 1
+	#define OS_NAME "macOS"
+	#define IS_BIG_ENDIAN 0
+
+#else
+	#undef OS_UNKNOWN
+	#define OS_UNKNOWN 1
+	#define OS_NAME "unknown"
+#endif
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// compiler
+/// compiler
+//
+
+#define COMPILER_GCC 0
+#define COMPILER_TCC 0
+#define COMPILER_UNKNOWN 0
+
+#if defined( __TINYC__ )
+	#undef COMPILER_TCC
+	#define COMPILER_TCC 1
+	#define COMPILER_NAME "TCC"
+
+#elif defined( __GNUC__ )
+	#undef COMPILER_GCC
+	#define COMPILER_GCC 1
+	#define COMPILER_NAME "GCC"
+
+#else
+	#undef COMPILER_UNKNOWN
+	#define COMPILER_UNKNOWN 1
+	#define COMPILER_NAME "unknown"
+#endif
+
+//
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// prefixes
 /// prefixes
 //
@@ -258,21 +246,6 @@
 #define size_of( TYPE... ) sizeof( TYPE )
 #define type_of( VAR... ) typeof( VAR )
 #define type_of_ref( REF... ) type_of( val_of( to( type_of( REF ), nothing ) ) )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn
-/// fn
-//
-
-#define embed perm inline
-#define fn embed anon
-#define out return
-
-#define fn_ref( OUTPUT, NAME, INPUT_TYPES... ) OUTPUT( ref NAME ) ( INPUT_TYPES )
-#define type_fn( OUTPUT, INPUT_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, INPUT_TYPES ) ) )
-
-#define call( FN, INPUTS... ) if_something( FN ) FN( INPUTS )
 
 //
 
@@ -320,106 +293,18 @@ type_from( _Bool ) flag;
 
 //
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// loops
-/// loops
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn
+/// fn
 //
 
-#define loop for( ;; )
-#define next continue
-#define skip break
-#define jump goto
-#define until( INPUTS... ) while( not( INPUTS ) )
+#define embed perm inline
+#define fn embed anon
+#define out return
 
-//
+#define fn_ref( OUTPUT, NAME, INPUT_TYPES... ) OUTPUT( ref NAME ) ( INPUT_TYPES )
+#define type_fn( OUTPUT, INPUT_TYPES... ) type_from( type_of( fn_ref( DEFAULT( anon, OUTPUT ),, INPUT_TYPES ) ) )
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// with/when
-/// with/when
-//
-
-#define with switch
-#define when( INPUTS... ) CHAIN( case, :,, INPUTS )
-#define other default:
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// range
-/// range (inclusive)
-//
-
-#define _range( POS_NAME, FROM, TO, STEP, SYMBOL_COMPARE, SYMBOL_STEP ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL_COMPARE i8( TO ); POS_NAME SYMBOL_STEP i8( STEP ) )
-
-#define range_step( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, <=, += )
-#define range_step_inv( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, >=, -= )
-
-#define range( POS_NAME, FROM, TO ) range_step( POS_NAME, FROM, TO, 1 )
-#define range_inv( POS_NAME, FROM, TO ) range_step_inv( POS_NAME, FROM, TO, 1 )
-
-#define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO ) range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// iterate
-/// iterate (exclusive)
-//
-
-#define iter_step( POS_NAME, SIZE, STEP ) _range( POS_NAME, 0, SIZE, STEP, <, += )
-#define iter_step_inv( POS_NAME, SIZE, STEP ) _range( POS_NAME, SIZE, 0, STEP, >, -= )
-
-#define iter( POS_NAME, SIZE ) _range( POS_NAME, 0, SIZE, 1, <, += )
-#define iter_inv( POS_NAME, SIZE ) _range( POS_NAME, SIZE - 1, 0, 1, >=, -= )
-
-#define iter_grid( X_NAME, Y_NAME, WIDTH, HEIGHT ) iter( Y_NAME, HEIGHT ) iter( X_NAME, WIDTH )
-
-#define _repeat( N_TIMES, COUNTER ) iter( JOIN( _REP_, COUNTER ), N_TIMES )
-#define repeat( N_TIMES ) _repeat( N_TIMES, __COUNTER__ )
-
-#define _once( _ONCE_ )\
-	perm flag _ONCE_ = yes;\
-	if( _ONCE_ and( _ONCE_ = no, yes ) )
-#define once _once( JOIN( _ONCE_, __COUNTER__ ) )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// conditionals
-/// conditionals
-//
-
-#define while_any( INPUTS... ) while any( INPUTS )
-#define while_all( INPUTS... ) while all( INPUTS )
-#define while_none( INPUTS... ) while none( INPUTS )
-#define while_not_all( INPUTS... ) while not_all( INPUTS )
-
-#define skip_if( INPUT... ) if( INPUT ) skip
-#define skip_if_nothing( INPUT... ) if_nothing( INPUT ) skip
-#define skip_if_something( INPUT... ) if_something( INPUT ) skip
-#define skip_if_any( INPUTS... ) if_any( INPUTS ) skip
-#define skip_if_all( INPUTS... ) if_all( INPUTS ) skip
-#define skip_if_none( INPUTS... ) if_none( INPUTS ) skip
-#define skip_if_not_all( INPUTS... ) if_not_all( INPUTS ) skip
-
-#define jump_if( INPUT... ) if( INPUT ) jump
-#define jump_if_nothing( INPUT... ) if_nothing( INPUT ) jump
-#define jump_if_something( INPUT... ) if_something( INPUT ) jump
-#define jump_if_any( INPUTS... ) if_any( INPUTS ) jump
-#define jump_if_all( INPUTS... ) if_all( INPUTS ) jump
-#define jump_if_none( INPUTS... ) if_none( INPUTS ) jump
-#define jump_if_not_all( INPUTS... ) if_not_all( INPUTS ) jump
-
-#define next_if( INPUT... ) if( INPUT ) next
-#define next_if_nothing( INPUT... ) if_nothing( INPUT ) next
-#define next_if_something( INPUT... ) if_something( INPUT ) next
-#define next_if_any( INPUTS... ) if_any( INPUTS ) next
-#define next_if_all( INPUTS... ) if_all( INPUTS ) next
-#define next_if_none( INPUTS... ) if_none( INPUTS ) next
-#define next_if_not_all( INPUTS... ) if_not_all( INPUTS ) next
-
-#define out_if( INPUT... ) if( INPUT ) out
-#define out_if_nothing( INPUT... ) if_nothing( INPUT ) out
-#define out_if_something( INPUT... ) if_something( INPUT ) out
-#define out_if_any( INPUTS... ) if_any( INPUTS ) out
-#define out_if_all( INPUTS... ) if_all( INPUTS ) out
-#define out_if_none( INPUTS... ) if_none( INPUTS ) out
-#define out_if_not_all( INPUTS... ) if_not_all( INPUTS ) out
+#define call( FN, INPUTS... ) if_something( FN ) FN( INPUTS )
 
 //
 
@@ -502,136 +387,22 @@ type_from( i4 ) out_state;
 
 //
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// fn inputs
-/// fn inputs
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// literals
+/// literals
 //
 
-#define input_list va_list
-#define inputs_init( INPUT_LIST_REF, BEFORE_ELLIPSIS ) va_start( INPUT_LIST_REF, BEFORE_ELLIPSIS )
-#define inputs_end( INPUT_LIST_REF ) va_end( INPUT_LIST_REF )
-#define inputs_copy( FROM, TO ) va_copy( TO, FROM )
+#define newline "\n"
+#define newline_byte '\n'
 
-#define _inputs_next_byte int
-#define _inputs_next_n1 unsigned int
-#define _inputs_next_i1 signed int
-#define _inputs_next_n2 unsigned int
-#define _inputs_next_i2 signed int
-#define _inputs_next_n4 unsigned int
-#define _inputs_next_i4 signed int
-#define _inputs_next_r4 double
-#define _inputs_next_n8 unsigned long long
-#define _inputs_next_i8 signed long long
-#define _inputs_next_r8 double
-#define _inputs_next_ref long ref
-#define inputs_next( INPUTS, TYPE ) va_arg( INPUTS, _inputs_next_##TYPE )
+#define separator OS_PICK( "/", "\\" )
+#define separator_byte OS_PICK( '/', '\\' )
 
-//
+#define tab "\t"
+#define tab_byte '\t'
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// bytes
-/// bytes (byte ref)
-//
+#define eof "\0"
+#define eof_byte '\0'
 
-#define is_letter( BYTE ) ( ( ( n4( BYTE ) | 0x20 ) - 'a' ) < 26 )
-#define is_number( BYTE ) ( ( n4( BYTE ) - '0' ) < 10 )
-
-#define KB( KILOBYTES ) ( ( KILOBYTES ) * 1000 )
-#define MB( MEGABYTES ) ( ( MEGABYTES ) * 1000000 )
-#define GB( GIGABYTES ) ( ( GIGABYTES ) * 1000000000 )
-
-#define KiB( KIBIBYTES ) ( ( KIBIBYTES ) << 10 )
-#define MiB( MEBIBYTES ) ( ( MEBIBYTES ) << 20 )
-#define GiB( GIBIBYTES ) ( ( GIBIBYTES ) << 30 )
-
-#define new_bytes( AMOUNT... ) malloc( DEFAULT( 1, AMOUNT ) )
-#define delete_bytes delete_ref
-#define duplicate_bytes( BYTES ) strdup( BYTES )
-
-#define bytes_resize( REF, NEW_SIZE... ) realloc( REF, DEFAULT( 1, NEW_SIZE ) )
-
-#define bytes_copy( TO_REF, FROM_REF, FROM_SIZE ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
-#define bytes_copy_until( TO_REF, FROM_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
-#define bytes_copy_until_any( TO_REF, FROM_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
-#define bytes_paste( TO_REF, FROM_REF ) strcpy( TO_REF, FROM_REF )
-#define bytes_move( REF, POSITION, SIZE, MOVE_AMOUNT ) memmove( ( REF ) + ( POSITION ) + ( MOVE_AMOUNT ), ( REF ) + ( POSITION ), ( SIZE ) )
-#define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
-#define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
-#define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
-#define bytes_match( A, B, AMOUNT ) ( bytes_compare( A, B, AMOUNT ) is 0 )
-#define bytes_measure( REF ) strlen( REF )
-#define bytes_find( BYTES, BYTE, MAX_SIZE ) memchr( BYTES, BYTE, MAX_SIZE )
-#define bytes_end( BYTES ) val_of( BYTES ) = eof_byte
-
-////////////////////////////////
-// auto-move variations
-
-#define bytes_copy_move( TO_REF, FROM_REF, FROM_SIZE )\
-	START_DEF\
-	{\
-		bytes_copy( TO_REF, FROM_REF, FROM_SIZE );\
-		TO_REF += FROM_SIZE;\
-	}\
-	END_DEF
-
-#define bytes_paste_move( TO_REF, FROM_REF )\
-	START_DEF\
-	{\
-		temp byte const ref const _FROM_REF = FROM_REF;\
-		temp n2 const _PASTE_SIZE = bytes_measure( _FROM_REF );\
-		bytes_copy_move( TO_REF, _FROM_REF, _PASTE_SIZE );\
-	}\
-	END_DEF
-
-#define bytes_set_move( TO_REF, BYTE ) val_of( TO_REF++ ) = BYTE
-
-#define bytes_newline_move( TO_REF ) bytes_set_move( TO_REF, newline_byte )
-#define bytes_separator_move( TO_REF ) bytes_set_move( TO_REF, separator_byte )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// allocated ref
-/// allocated ref
-//
-
-#define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
-
-embed anon ref _alloc( n8 const size )
-{
-	#if OS_LINUX
-		temp n8 const total = size + size_of( n8 );
-		temp anon ref const p = mmap( nothing, _alloc_page_round( total ), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
-		out_if( p is MAP_FAILED ) nothing;
-		val_of( to( n8 ref, p ) ) = size;
-		out to( anon ref, to( n1 ref, p ) + size_of( n8 ) );
-	#elif OS_WINDOWS
-		out VirtualAlloc( nothing, _alloc_page_round( size ), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
-	#endif
-}
-
-fn _free( anon ref const r )
-{
-	#if OS_LINUX
-		temp n1 ref const base = to( n1 ref, r ) - size_of( n8 );
-		munmap( base, _alloc_page_round( val_of( to( n8 ref, base ) ) + size_of( n8 ) ) );
-	#elif OS_WINDOWS
-		VirtualFree( r, 0, MEM_RELEASE );
-	#endif
-}
-
-#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
-#define delete_ref( REF ) if_something( REF ) _free( REF )
-
-embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const new_size )
-{
-	temp anon ref const p = _alloc( new_size );
-	out_if( p is nothing ) nothing;
-	if_something( r )
-	{
-		bytes_copy( p, r, pick( old_size < new_size, old_size, new_size ) );
-		_free( r );
-	}
-	out p;
-}
-#define ref_resize( REF, OLD_SIZE, NEW_SIZE ) to( type_of( REF ), _ref_resize( REF, OLD_SIZE, NEW_SIZE ) )
 //
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// declare types
@@ -672,8 +443,194 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 #define group( NAME, TYPE... )\
 	PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum NAME
 
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// loops
+/// loops
+//
+
+#define loop for( ;; )
+#define next continue
+#define skip break
+#define jump goto
+#define until( INPUTS... ) while( not( INPUTS ) )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// with/when
+/// with/when
+//
+
+#define with switch
+#define when( INPUTS... ) CHAIN( case, :,, INPUTS )
+#define other default:
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// range
+/// range (inclusive)
+//
+
+#define _range( POS_NAME, FROM, TO, STEP, SYMBOL_COMPARE, SYMBOL_STEP ) for( temp i8 POS_NAME = i8( FROM ); POS_NAME SYMBOL_COMPARE i8( TO ); POS_NAME SYMBOL_STEP i8( STEP ) )
+
+#define range_step( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, <=, += )
+#define range_step_inv( POS_NAME, FROM, TO, STEP ) _range( POS_NAME, FROM, TO, STEP, >=, -= )
+
+#define range( POS_NAME, FROM, TO ) range_step( POS_NAME, FROM, TO, 1 )
+#define range_inv( POS_NAME, FROM, TO ) range_step_inv( POS_NAME, FROM, TO, 1 )
+
+#define range_grid( X_NAME, Y_NAME, X_FROM, X_TO, Y_FROM, Y_TO ) range( Y_NAME, Y_FROM, Y_TO ) range( X_NAME, X_FROM, X_TO )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// iterate
+/// iterate (exclusive)
+//
+
+#define iter_step( POS_NAME, SIZE, STEP ) _range( POS_NAME, 0, SIZE, STEP, <, += )
+#define iter_step_inv( POS_NAME, SIZE, STEP ) _range( POS_NAME, SIZE, 0, STEP, >, -= )
+
+#define iter( POS_NAME, SIZE ) _range( POS_NAME, 0, SIZE, 1, <, += )
+#define iter_inv( POS_NAME, SIZE ) _range( POS_NAME, SIZE - 1, 0, 1, >=, -= )
+
+#define iter_grid( X_NAME, Y_NAME, WIDTH, HEIGHT ) iter( Y_NAME, HEIGHT ) iter( X_NAME, WIDTH )
+
+#define _repeat( N_TIMES, COUNTER ) iter( JOIN( _REP_, COUNTER ), N_TIMES )
+#define repeat( N_TIMES ) _repeat( N_TIMES, __COUNTER__ )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// conditionals
+/// conditionals
+//
+
+#define _once( _ONCE_ )\
+	perm flag _ONCE_ = yes;\
+	if( _ONCE_ and( _ONCE_ = no, yes ) )
+#define once _once( JOIN( _ONCE_, __COUNTER__ ) )
+
+#define while_any( INPUTS... ) while any( INPUTS )
+#define while_all( INPUTS... ) while all( INPUTS )
+#define while_none( INPUTS... ) while none( INPUTS )
+#define while_not_all( INPUTS... ) while not_all( INPUTS )
+
+#define skip_if( INPUT... ) if( INPUT ) skip
+#define skip_if_nothing( INPUT... ) if_nothing( INPUT ) skip
+#define skip_if_something( INPUT... ) if_something( INPUT ) skip
+#define skip_if_any( INPUTS... ) if_any( INPUTS ) skip
+#define skip_if_all( INPUTS... ) if_all( INPUTS ) skip
+#define skip_if_none( INPUTS... ) if_none( INPUTS ) skip
+#define skip_if_not_all( INPUTS... ) if_not_all( INPUTS ) skip
+
+#define jump_if( INPUT... ) if( INPUT ) jump
+#define jump_if_nothing( INPUT... ) if_nothing( INPUT ) jump
+#define jump_if_something( INPUT... ) if_something( INPUT ) jump
+#define jump_if_any( INPUTS... ) if_any( INPUTS ) jump
+#define jump_if_all( INPUTS... ) if_all( INPUTS ) jump
+#define jump_if_none( INPUTS... ) if_none( INPUTS ) jump
+#define jump_if_not_all( INPUTS... ) if_not_all( INPUTS ) jump
+
+#define next_if( INPUT... ) if( INPUT ) next
+#define next_if_nothing( INPUT... ) if_nothing( INPUT ) next
+#define next_if_something( INPUT... ) if_something( INPUT ) next
+#define next_if_any( INPUTS... ) if_any( INPUTS ) next
+#define next_if_all( INPUTS... ) if_all( INPUTS ) next
+#define next_if_none( INPUTS... ) if_none( INPUTS ) next
+#define next_if_not_all( INPUTS... ) if_not_all( INPUTS ) next
+
+#define out_if( INPUT... ) if( INPUT ) out
+#define out_if_nothing( INPUT... ) if_nothing( INPUT ) out
+#define out_if_something( INPUT... ) if_something( INPUT ) out
+#define out_if_any( INPUTS... ) if_any( INPUTS ) out
+#define out_if_all( INPUTS... ) if_all( INPUTS ) out
+#define out_if_none( INPUTS... ) if_none( INPUTS ) out
+#define out_if_not_all( INPUTS... ) if_not_all( INPUTS ) out
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// inputs
+/// inputs
+//
+
+#define input_list va_list
+#define inputs_init( INPUT_LIST_REF, BEFORE_ELLIPSIS ) va_start( INPUT_LIST_REF, BEFORE_ELLIPSIS )
+#define inputs_end( INPUT_LIST_REF ) va_end( INPUT_LIST_REF )
+#define inputs_copy( FROM, TO ) va_copy( TO, FROM )
+
+#define _inputs_next_byte int
+#define _inputs_next_n1 unsigned int
+#define _inputs_next_i1 signed int
+#define _inputs_next_n2 unsigned int
+#define _inputs_next_i2 signed int
+#define _inputs_next_n4 unsigned int
+#define _inputs_next_i4 signed int
+#define _inputs_next_r4 double
+#define _inputs_next_n8 unsigned long long
+#define _inputs_next_i8 signed long long
+#define _inputs_next_r8 double
+#define _inputs_next_ref long ref
+#define inputs_next( INPUTS, TYPE ) va_arg( INPUTS, _inputs_next_##TYPE )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// bytes
+/// bytes (byte ref)
+//
+
+#define is_letter( BYTE ) ( ( ( n4( BYTE ) | 0x20 ) - 'a' ) < 26 )
+#define is_number( BYTE ) ( ( n4( BYTE ) - '0' ) < 10 )
+
+#define KB( KILOBYTES ) ( ( KILOBYTES ) * 1000 )
+#define MB( MEGABYTES ) ( ( MEGABYTES ) * 1000000 )
+#define GB( GIGABYTES ) ( ( GIGABYTES ) * 1000000000 )
+
+#define KiB( KIBIBYTES ) ( ( KIBIBYTES ) << 10 )
+#define MiB( MEBIBYTES ) ( ( MEBIBYTES ) << 20 )
+#define GiB( GIBIBYTES ) ( ( GIBIBYTES ) << 30 )
+
+#define bytes_copy( TO_REF, FROM_REF, FROM_SIZE ) memcpy( TO_REF, FROM_REF, FROM_SIZE )
+#define bytes_copy_until( TO_REF, FROM_REF, CHAR, MAX_SIZE ) memccpy( TO_REF, FROM_REF, CHAR, MAX_SIZE )
+#define bytes_copy_until_any( TO_REF, FROM_REF, DELIMS ) memcpy( TO_REF, FROM_REF, strcspn( FROM_REF, DELIMS ) )
+#define bytes_paste( TO_REF, FROM_REF ) strcpy( TO_REF, FROM_REF )
+#define bytes_move( REF, POSITION, SIZE, MOVE_AMOUNT ) memmove( ( REF ) + ( POSITION ) + ( MOVE_AMOUNT ), ( REF ) + ( POSITION ), ( SIZE ) )
+#define bytes_fill( REF, VAL, SIZE ) memset( REF, VAL, SIZE )
+#define bytes_clear( REF, SIZE ) bytes_fill( REF, 0, SIZE )
+#define bytes_compare( A, B, AMOUNT ) memcmp( A, B, AMOUNT )
+#define bytes_match( A, B, AMOUNT ) ( bytes_compare( A, B, AMOUNT ) is 0 )
+#define bytes_measure( REF ) strlen( REF )
+#define bytes_find( BYTES, BYTE, MAX_SIZE ) memchr( BYTES, BYTE, MAX_SIZE )
+#define bytes_end( BYTES ) val_of( BYTES ) = eof_byte
+
 ////////////////////////////////
-/// byte conversion
+// auto-move
+
+#define bytes_copy_move( TO_REF, FROM_REF, FROM_SIZE )\
+	START_DEF\
+	{\
+		bytes_copy( TO_REF, FROM_REF, FROM_SIZE );\
+		TO_REF += FROM_SIZE;\
+	}\
+	END_DEF
+
+#define bytes_paste_move( TO_REF, FROM_REF )\
+	START_DEF\
+	{\
+		temp byte const ref const _FROM_REF = FROM_REF;\
+		temp n2 const _PASTE_SIZE = bytes_measure( _FROM_REF );\
+		bytes_copy_move( TO_REF, _FROM_REF, _PASTE_SIZE );\
+	}\
+	END_DEF
+
+#define bytes_set_move( TO_REF, BYTE ) val_of( TO_REF++ ) = BYTE
+
+#define bytes_newline_move( TO_REF ) bytes_set_move( TO_REF, newline_byte )
+#define bytes_separator_move( TO_REF ) bytes_set_move( TO_REF, separator_byte )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// value to bytes
+/// value to bytes
+//
 
 #define _BYTES_ADD_BUFFER( BYTES )\
 	byte buffer[ BYTES ];\
@@ -709,78 +666,6 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 	}\
 	END_DEF
 
-#define bytes_n1_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n1 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 3 );\
-		_BYTES_ADD_N( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_n2_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n2 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 5 );\
-		_BYTES_ADD_N( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_n4_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n4 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 10 );\
-		_BYTES_ADD_N( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_n8_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n8 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 20 );\
-		_BYTES_ADD_N( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_i1_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp i1 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 4 );\
-		_BYTES_ADD_I( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_i2_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp i2 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 6 );\
-		_BYTES_ADD_I( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_i4_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp i4 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 11 );\
-		_BYTES_ADD_I( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_i8_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp i8 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 21 );\
-		_BYTES_ADD_I( TO_REF, _val );\
-	}\
-	END_DEF
-
 #define _BYTES_ADD_R( TO_REF, VAL, N )\
 	START_DEF\
 	{\
@@ -795,26 +680,6 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 			bytes_set_move( TO_REF, '0' + digit );\
 			frac_part -= digit;\
 		}\
-	}\
-	END_DEF
-
-#define bytes_r4_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp r4 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 32 );\
-		_BYTES_ADD_NEGATIVE( TO_REF, _val );\
-		_BYTES_ADD_R( TO_REF, _val, 4 );\
-	}\
-	END_DEF
-
-#define bytes_r8_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp r8 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 64 );\
-		_BYTES_ADD_NEGATIVE( TO_REF, _val );\
-		_BYTES_ADD_R( TO_REF, _val, 8 );\
 	}\
 	END_DEF
 
@@ -833,42 +698,6 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 	}\
 	END_DEF
 
-#define bytes_octal_n1_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n1 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 3 );\
-		_BYTES_ADD_OCTAL( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_octal_n2_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n2 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 6 );\
-		_BYTES_ADD_OCTAL( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_octal_n4_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n4 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 11 );\
-		_BYTES_ADD_OCTAL( TO_REF, _val );\
-	}\
-	END_DEF
-
-#define bytes_octal_n8_move( TO_REF, VAL )\
-	START_DEF\
-	{\
-		temp n8 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 22 );\
-		_BYTES_ADD_OCTAL( TO_REF, _val );\
-	}\
-	END_DEF
-
 #define _BYTES_ADD_HEX( TO_REF, VAL )\
 	START_DEF\
 	{\
@@ -884,63 +713,488 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 	}\
 	END_DEF
 
-#define bytes_hex_n1_move( TO_REF, VAL )\
+#define _BYTES_DECL_move( TO_REF )
+#define _BYTES_DECL( TO_REF ) byte ref _to_ref = ( TO_REF );
+
+#define _BYTES_REF_move( TO_REF ) TO_REF
+#define _BYTES_REF( TO_REF ) _to_ref
+
+#define _GEN_N_TO_BYTES( MOVE, BITS, BUF, VAL, TO_REF )\
 	START_DEF\
 	{\
-		temp n1 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 2 );\
-		_BYTES_ADD_HEX( TO_REF, _val );\
+		_BYTES_DECL##MOVE( TO_REF ) temp n##BITS _val = ( VAL );\
+		_BYTES_ADD_BUFFER( BUF );\
+		_BYTES_ADD_N( _BYTES_REF##MOVE( TO_REF ), _val );\
 	}\
 	END_DEF
 
-#define bytes_hex_n2_move( TO_REF, VAL )\
+#define _GEN_I_TO_BYTES( MOVE, BITS, BUF, VAL, TO_REF )\
 	START_DEF\
 	{\
-		temp n2 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 4 );\
-		_BYTES_ADD_HEX( TO_REF, _val );\
+		_BYTES_DECL##MOVE( TO_REF ) temp i##BITS _val = ( VAL );\
+		_BYTES_ADD_BUFFER( BUF );\
+		_BYTES_ADD_I( _BYTES_REF##MOVE( TO_REF ), _val );\
 	}\
 	END_DEF
 
-#define bytes_hex_n4_move( TO_REF, VAL )\
+#define _GEN_R_TO_BYTES( MOVE, BITS, BUF, VAL, TO_REF )\
 	START_DEF\
 	{\
-		temp n4 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 8 );\
-		_BYTES_ADD_HEX( TO_REF, _val );\
+		_BYTES_DECL##MOVE( TO_REF ) temp r##BITS _val = ( VAL );\
+		_BYTES_ADD_BUFFER( BUF );\
+		_BYTES_ADD_NEGATIVE( _BYTES_REF##MOVE( TO_REF ), _val );\
+		_BYTES_ADD_R( _BYTES_REF##MOVE( TO_REF ), _val, BITS );\
 	}\
 	END_DEF
 
-#define bytes_hex_n8_move( TO_REF, VAL )\
+#define _GEN_OCTAL_TO_BYTES( MOVE, BITS, BUF, VAL, TO_REF )\
 	START_DEF\
 	{\
-		temp n8 _val = ( VAL );\
-		_BYTES_ADD_BUFFER( 16 );\
-		_BYTES_ADD_HEX( TO_REF, _val );\
+		_BYTES_DECL##MOVE( TO_REF ) temp n##BITS _val = ( VAL );\
+		_BYTES_ADD_BUFFER( BUF );\
+		_BYTES_ADD_OCTAL( _BYTES_REF##MOVE( TO_REF ), _val );\
 	}\
 	END_DEF
+
+#define _GEN_HEX_TO_BYTES( MOVE, BITS, BUF, VAL, TO_REF )\
+	START_DEF\
+	{\
+		_BYTES_DECL##MOVE( TO_REF ) temp n##BITS _val = ( VAL );\
+		_BYTES_ADD_BUFFER( BUF );\
+		_BYTES_ADD_HEX( _BYTES_REF##MOVE( TO_REF ), _val );\
+	}\
+	END_DEF
+
+////////////////////////////////
+// natural
+
+#define n1_to_bytes( VAL, TO_REF ) _GEN_N_TO_BYTES(, 1, 3, VAL, TO_REF )
+#define n1_to_bytes_move( VAL, TO_REF ) _GEN_N_TO_BYTES( _move, 1, 3, VAL, TO_REF )
+#define n2_to_bytes( VAL, TO_REF ) _GEN_N_TO_BYTES(, 2, 5, VAL, TO_REF )
+#define n2_to_bytes_move( VAL, TO_REF ) _GEN_N_TO_BYTES( _move, 2, 5, VAL, TO_REF )
+#define n4_to_bytes( VAL, TO_REF ) _GEN_N_TO_BYTES(, 4, 10, VAL, TO_REF )
+#define n4_to_bytes_move( VAL, TO_REF ) _GEN_N_TO_BYTES( _move, 4, 10, VAL, TO_REF )
+#define n8_to_bytes( VAL, TO_REF ) _GEN_N_TO_BYTES(, 8, 20, VAL, TO_REF )
+#define n8_to_bytes_move( VAL, TO_REF ) _GEN_N_TO_BYTES( _move, 8, 20, VAL, TO_REF )
+
+////////////////////////////////
+// integer
+
+#define i1_to_bytes( VAL, TO_REF ) _GEN_I_TO_BYTES(, 1, 4, VAL, TO_REF )
+#define i1_to_bytes_move( VAL, TO_REF ) _GEN_I_TO_BYTES( _move, 1, 4, VAL, TO_REF )
+#define i2_to_bytes( VAL, TO_REF ) _GEN_I_TO_BYTES(, 2, 6, VAL, TO_REF )
+#define i2_to_bytes_move( VAL, TO_REF ) _GEN_I_TO_BYTES( _move, 2, 6, VAL, TO_REF )
+#define i4_to_bytes( VAL, TO_REF ) _GEN_I_TO_BYTES(, 4, 11, VAL, TO_REF )
+#define i4_to_bytes_move( VAL, TO_REF ) _GEN_I_TO_BYTES( _move, 4, 11, VAL, TO_REF )
+#define i8_to_bytes( VAL, TO_REF ) _GEN_I_TO_BYTES(, 8, 21, VAL, TO_REF )
+#define i8_to_bytes_move( VAL, TO_REF ) _GEN_I_TO_BYTES( _move, 8, 21, VAL, TO_REF )
+
+////////////////////////////////
+// rational
+
+#define r4_to_bytes( VAL, TO_REF ) _GEN_R_TO_BYTES(, 4, 32, VAL, TO_REF )
+#define r4_to_bytes_move( VAL, TO_REF ) _GEN_R_TO_BYTES( _move, 4, 32, VAL, TO_REF )
+#define r8_to_bytes( VAL, TO_REF ) _GEN_R_TO_BYTES(, 8, 64, VAL, TO_REF )
+#define r8_to_bytes_move( VAL, TO_REF ) _GEN_R_TO_BYTES( _move, 8, 64, VAL, TO_REF )
+
+////////////////////////////////
+// octal
+
+#define octal_n1_to_bytes( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES(, 1, 3, VAL, TO_REF )
+#define octal_n1_to_bytes_move( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES( _move, 1, 3, VAL, TO_REF )
+#define octal_n2_to_bytes( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES(, 2, 6, VAL, TO_REF )
+#define octal_n2_to_bytes_move( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES( _move, 2, 6, VAL, TO_REF )
+#define octal_n4_to_bytes( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES(, 4, 11, VAL, TO_REF )
+#define octal_n4_to_bytes_move( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES( _move, 4, 11, VAL, TO_REF )
+#define octal_n8_to_bytes( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES(, 8, 22, VAL, TO_REF )
+#define octal_n8_to_bytes_move( VAL, TO_REF ) _GEN_OCTAL_TO_BYTES( _move, 8, 22, VAL, TO_REF )
+
+////////////////////////////////
+// hexadecimal
+
+#define hex_n1_to_bytes( VAL, TO_REF ) _GEN_HEX_TO_BYTES(, 1, 2, VAL, TO_REF )
+#define hex_n1_to_bytes_move( VAL, TO_REF ) _GEN_HEX_TO_BYTES( _move, 1, 2, VAL, TO_REF )
+#define hex_n2_to_bytes( VAL, TO_REF ) _GEN_HEX_TO_BYTES(, 2, 4, VAL, TO_REF )
+#define hex_n2_to_bytes_move( VAL, TO_REF ) _GEN_HEX_TO_BYTES( _move, 2, 4, VAL, TO_REF )
+#define hex_n4_to_bytes( VAL, TO_REF ) _GEN_HEX_TO_BYTES(, 4, 8, VAL, TO_REF )
+#define hex_n4_to_bytes_move( VAL, TO_REF ) _GEN_HEX_TO_BYTES( _move, 4, 8, VAL, TO_REF )
+#define hex_n8_to_bytes( VAL, TO_REF ) _GEN_HEX_TO_BYTES(, 8, 16, VAL, TO_REF )
+#define hex_n8_to_bytes_move( VAL, TO_REF ) _GEN_HEX_TO_BYTES( _move, 8, 16, VAL, TO_REF )
 
 //
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// terminal print
-/// terminal print
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// allocated ref
+/// allocated ref
 //
+
+#define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
+#define _ALLOC_HEADER size_of( n8 )
+#define _alloc_base( REF ) ( to( n1 ref, REF ) - _ALLOC_HEADER )
+#define _alloc_total( REF ) val_of( to( n8 ref, _alloc_base( REF ) ) )
+
+embed anon ref _alloc( n8 const size )
+{
+	temp n8 const total = _alloc_page_round( size + _ALLOC_HEADER );
+	#if OS_LINUX
+		temp anon ref const p = mmap( nothing, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+		out_if( p is MAP_FAILED ) nothing;
+	#elif OS_WINDOWS
+		temp anon ref const p = VirtualAlloc( nothing, total, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
+		out_if( p is nothing ) nothing;
+	#endif
+	val_of( to( n8 ref, p ) ) = total;
+	out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+}
+
+fn _free( anon ref const r )
+{
+	#if OS_LINUX
+		munmap( _alloc_base( r ), _alloc_total( r ) );
+	#elif OS_WINDOWS
+		VirtualFree( _alloc_base( r ), 0, MEM_RELEASE );
+	#endif
+}
+
+embed anon ref const _ref_resize( anon ref const r, n8 const new_size )
+{
+	out_if( r is nothing ) _alloc( new_size );
+	temp n8 const new_total = _alloc_page_round( new_size + _ALLOC_HEADER );
+	#if OS_LINUX
+		temp anon ref const p = mremap( _alloc_base( r ), _alloc_total( r ), new_total, MREMAP_MAYMOVE );
+		out_if( p is MAP_FAILED ) nothing;
+	#elif OS_WINDOWS
+		temp anon ref const p = _alloc( new_size );
+		out_if( p is nothing ) nothing;
+		bytes_copy( p, r, _alloc_total( r ) - _ALLOC_HEADER );
+		_free( r );
+	#endif
+	val_of( to( n8 ref, p ) ) = new_total;
+	out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+}
+
+#define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
+#define delete_ref( REF ) START_DEF { if_something( REF ) { _free( REF ); REF = nothing; } } END_DEF
+#define ref_resize( REF, NEW_SIZE ) to( type_of( REF ), _ref_resize( REF, NEW_SIZE ) )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS file
+/// OS file
+//
+
+type_from( FILE ref ) os_file_handle;
+#define os_file_get_line fgets
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS path
+/// OS path
+//
+
+#define path_max_size 260
+
+#define path( FOLDERS... ) CHAIN(,, separator, FOLDERS )
+
+fn path_up_folder( byte ref const path )
+{
+	temp byte ref p = path + bytes_measure( path );
+	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
+	if( p > path ) val_of( p ) = eof_byte;
+}
+
+embed byte ref const path_get_name( byte ref const path )
+{
+	temp byte ref p = path + bytes_measure( path );
+	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
+	if( p > path ) ++p;
+	out p;
+}
+
+embed byte ref const path_get_extension( byte ref const path )
+{
+	temp byte ref p = path + bytes_measure( path );
+	while( p > path and val_of( --p ) isnt '.' );
+	if( p > path ) ++p;
+	out p;
+}
+
+embed byte ref program_get_path()
+{
+	perm byte exe_path[ path_max_size ] = "";
+	#if OS_LINUX
+		temp i8 _s = readlink( "/proc/self/exe", exe_path, path_max_size );
+	#elif OS_WINDOWS
+		GetModuleFileNameA( nothing, exe_path, path_max_size );
+	#endif
+	out exe_path;
+}
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS entries
+/// OS entries (folders/files)
+//
+
+group( entry_type )
+{
+	entry_unknown,
+	entry_folders,
+	entry_files,
+	entry_any
+};
+
+embed n2 os_get_entries( byte const ref const folder_path, byte entries[][ path_max_size ], n2 const max_entries, entry_type const type, flag const folder_separator )
+{
+	n2 count = 0,
+	len = bytes_measure( folder_path );
+	perm byte path[ path_max_size ];
+	bytes_copy( path, folder_path, len );
+	#if OS_LINUX
+		struct dirent ref entry;
+		struct stat stat_buf;
+		anon ref handle = opendir( path );
+		if_nothing( handle ) out 0;
+		path[ len++ ] = '/';
+		while( ( entry = readdir( handle ) ) and count < max_entries )
+		{
+			next_if( entry->d_name[ 0 ] is '.' );
+			n2 esz = bytes_measure( entry->d_name ) + 1;
+			bytes_copy( path + len, entry->d_name, esz );
+			if( stat( path, ref_of( stat_buf ) ) isnt 0 ) next;
+			flag is_dir = flag( S_ISDIR( stat_buf.st_mode ) );
+			if( type isnt entry_any and is_dir isnt ( type is entry_folders ) ) next;
+			bytes_copy( entries[ count ], entry->d_name, esz );
+			if( is_dir and folder_separator )
+			{
+				entries[ count ][ esz - 1 ] = val_of( separator );
+				entries[ count ][ esz ] = eof_byte;
+			}
+			++count;
+		}
+		closedir( handle );
+	#elif OS_WINDOWS
+		WIN32_FIND_DATA entry;
+		bytes_copy( path + len, "\\*", 3 );
+		anon ref handle = FindFirstFile( path, ref_of( entry ) );
+		if( handle is INVALID_HANDLE_VALUE ) out 0;
+		do
+		{
+			next_if( entry.cFileName[ 0 ] is '.' );
+			flag is_dir = flag( entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY );
+			if( type isnt entry_any and is_dir isnt ( type is entry_folders ) ) next;
+			n2 esz = bytes_measure( entry.cFileName ) + 1;
+			bytes_copy( entries[ count ], entry.cFileName, esz );
+			if( is_dir and folder_separator )
+			{
+				entries[ count ][ esz - 1 ] = val_of( separator );
+				entries[ count ][ esz ] = eof_byte;
+			}
+			++count;
+		}
+		while( count < max_entries and FindNextFile( handle, ref_of( entry ) ) );
+		FindClose( handle );
+	#endif
+	out count;
+}
+
+#define os_get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
+#define os_get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
+
+////////////////////////////////
+// folder
+
+fn os_create_folder( byte const ref const path )
+{
+	#if OS_LINUX
+		mkdir( path, 0755 );
+	#else
+		CreateDirectoryA( path, nothing );
+	#endif
+}
+
+fn os_delete_folder( byte const ref const path )
+{
+	#if OS_LINUX
+		rmdir( path );
+	#else
+		RemoveDirectoryA( path );
+	#endif
+}
+
+embed flag os_folder_exists( byte const ref const path )
+{
+	#if OS_LINUX
+		struct stat st;
+		out( stat( path, ref_of( st ) ) is 0 and S_ISDIR( st.st_mode ) );
+	#elif OS_WINDOWS
+		DWORD attrib = GetFileAttributesA( path );
+		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
+	#endif
+}
+
+////////////////////////////////
+// file
+
+type( file )
+{
+	byte path[ path_max_size ];
+	n2 path_size;
+	os_file_handle handle;
+	byte ref mapped_bytes;
+	n8 size;
+};
+
+embed n8 os_file_size( byte const ref const file_path )
+{
+	#if OS_LINUX
+		struct stat st;
+		out pick( stat( file_path, ref_of( st ) ) is 0, to( n8 const, st.st_size ), 0 );
+	#elif OS_WINDOWS
+		WIN32_FILE_ATTRIBUTE_DATA fad;
+		out pick( GetFileAttributesExA( file_path, GetFileExInfoStandard, ref_of( fad ) ), to( n8 const, ( n8( fad.nFileSizeHigh ) << 32 ) | n8( fad.nFileSizeLow ) ), 0 );
+	#endif
+}
+
+embed flag os_file_exists( byte const ref const path )
+{
+	#if OS_LINUX
+		struct stat st;
+		out( stat( path, ref_of( st ) ) is 0 and S_ISREG( st.st_mode ) );
+	#elif OS_WINDOWS
+		DWORD attrib = GetFileAttributesA( path );
+		out ( attrib isnt INVALID_FILE_ATTRIBUTES and not ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
+	#endif
+}
+
+embed file _open_file_saving( byte const ref const path, n4 const path_size )
+{
+	file f = { 0 };
+	f.handle = fopen( path, "wb" );
+	out_if_nothing( f.handle ) f;
+	f.path_size = path_size;
+	bytes_copy( f.path, path, f.path_size );
+	out f;
+}
+
+embed file _open_file_loading( byte const ref const path, n4 const path_size )
+{
+	file f = { 0 };
+	f.size = os_file_size( path );
+	if( f.size is 0 ) out f;
+	f.handle = fopen( path, "rb" );
+	out_if_nothing( f.handle ) f;
+	f.path_size = path_size;
+	bytes_copy( f.path, path, f.path_size );
+	out f;
+}
+
+#define os_create_file( PATH, PATH_SIZE... ) _open_file_saving( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
+#define os_open_file( PATH, PATH_SIZE... ) _open_file_loading( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
+
+embed file _map_file( byte const ref const path, n4 const path_size )
+{
+	file f = { 0 };
+	f.size = os_file_size( path );
+	if( f.size is 0 ) out f;
+	#if OS_LINUX
+		i4 fd = open( path, O_RDONLY );
+		out_if( fd is -1 ) f;
+		anon ref mapped = mmap( nothing, f.size, PROT_READ, MAP_PRIVATE, fd, 0 );
+		close( fd );
+		out_if( mapped is MAP_FAILED ) f;
+		f.mapped_bytes = to( byte ref, mapped );
+	#elif OS_WINDOWS
+		HANDLE hf = CreateFileA( path, GENERIC_READ, FILE_SHARE_READ, nothing, OPEN_EXISTING, 0, nothing );
+		out_if( hf is INVALID_HANDLE_VALUE ) f;
+		HANDLE hm = CreateFileMapping( hf, nothing, PAGE_READONLY, 0, 0, nothing );
+		CloseHandle( hf );
+		if_nothing( hm ) out f;
+		f.mapped_bytes = to( byte ref, MapViewOfFile( hm, FILE_MAP_READ, 0, 0, 0 ) );
+		CloseHandle( hm );
+	#endif
+	f.path_size = path_size;
+	bytes_copy( f.path, path, f.path_size );
+	out f;
+}
+#define os_map_file( PATH, PATH_SIZE... ) _map_file( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
+
+fn os_delete_file( const byte ref const path )
+{
+	remove( path );
+}
+
+fn file_save( file ref f, byte const ref const bytes, n8 const size )
+{
+	if_nothing( f->handle ) out;
+	fseek( f->handle, 0, SEEK_SET );
+	f->size = size;
+	fwrite( bytes, 1, f->size, f->handle );
+	fflush( f->handle );
+}
+
+fn file_load( file ref f, byte ref const out_bytes )
+{
+	if_nothing( f->handle ) out;
+	fseek( f->handle, 0, SEEK_SET );
+	fread( out_bytes, 1, f->size, f->handle );
+}
+
+fn file_clear( file ref f )
+{
+	f->handle = nothing;
+	bytes_clear( f->path, f->path_size );
+	f->path_size = 0;
+	f->size = 0;
+}
+
+fn file_close( file ref f )
+{
+	if_something( f->handle ) fclose( f->handle );
+	file_clear( f );
+}
+
+fn file_unmap( file ref f )
+{
+	if_something( f->mapped_bytes )
+	{
+		#if OS_LINUX
+			munmap( f->mapped_bytes, f->size );
+		#elif OS_WINDOWS
+			UnmapViewOfFile( f->mapped_bytes );
+		#endif
+	}
+	file_clear( f );
+}
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// terminal
+/// terminal
+//
+
+fn terminal_get_input( byte ref const bytes, n2 const bytes_size )
+{
+	os_file_get_line( bytes, bytes_size, stdin );
+	temp n2 const input_size = bytes_measure( bytes );
+	out_if( input_size is 0 );
+	bytes[ input_size - 1 ] = eof_byte;
+}
+
+////////////////////////////////
+// command
+
+#define command( COMMAND ) system( COMMAND )
+
+#define command_read_open( COMMAND ) popen( COMMAND, "r" )
+#define command_read_close( OS_FILE_HANDLE ) pclose( OS_FILE_HANDLE )
+
+////////////////////////////////
+// print
 
 #define print( BYTES ) fputs( BYTES, stdout )
 #define print_count( BYTES, SIZE ) fwrite( BYTES, 1, SIZE, stdout )
 #define print_show() fflush( stdout )
-
-#define newline "\n"
-#define newline_byte '\n'
-
-#define separator OS_PICK( "/", "\\" )
-#define separator_byte OS_PICK( '/', '\\' )
-
-#define tab "\t"
-#define tab_byte '\t'
-
-#define eof "\0"
-#define eof_byte '\0'
+#define print_clear() system( OS_PICK( "clear", "cls" ) )
 
 #define print_newline() print_count( newline, 1 )
 #define print_separator() print_count( separator, 1 )
@@ -1038,8 +1292,6 @@ embed anon ref const _ref_resize( anon ref const r, n8 const old_size, n8 const 
 #define print_unset_strikethrough() print_set_format( no_strikethrough )
 
 #define print_reset_format() print_set_format( reset )
-
-#define print_clear() system( OS_PICK( "clear", "cls" ) )
 
 //
 
@@ -1246,7 +1498,6 @@ FUNCTION_GROUP_R( 4 );
 #define r4_mod fmodf
 #define r4_sqrt sqrtf
 #define r4_pow powf
-#define r4_sincos sincosf
 #define r4_sin sinf
 #define r4_cos cosf
 #define r4_tan tanf
@@ -1265,7 +1516,6 @@ FUNCTION_GROUP_R( 8 );
 #define r8_mod fmod
 #define r8_sqrt sqrt
 #define r8_pow pow
-#define r8_sincos sincos
 #define r8_sin sin
 #define r8_cos cos
 #define r8_tan tan
@@ -1274,440 +1524,14 @@ FUNCTION_GROUP_R( 8 );
 #define r8_atan atan
 #define r8_atanyx atan2
 
-#if( OS_WINDOWS and COMPILER_TCC ) or( OS_LINUX and COMPILER_GCC )
-	fn sincosf( r4 const x, r4 ref const sin_x, r4 ref const cos_x )
-	{
-		val_of( sin_x ) = r4_sin( x );
-		val_of( cos_x ) = r4_cos( x );
-	}
-
-	fn sincos( r8 const x, r8 ref const sin_x, r8 ref const cos_x )
-	{
-		val_of( sin_x ) = r8_sin( x );
-		val_of( cos_x ) = r8_cos( x );
-	}
-#endif
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS file
-/// OS file
-//
-
-type_from( FILE ref ) os_file_handle;
-
-#define os_file_get_line fgets
-#define system_read( COMMAND ) popen( COMMAND, "r" )
-
-////////////////////////////////
-// input
-
-embed byte const ref const get_os_input()
-{
-	perm byte print_input[ KB( 1 ) ];
-	os_file_get_line( print_input, size_of_bytes( print_input ), stdin );
-	temp n2 const input_size = bytes_measure( print_input );
-	out_if( input_size is 0 ) nothing;
-	print_input[ input_size - 1 ] = eof_byte;
-	out print_input;
-}
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS path
-/// OS path
-//
-
-#define path_max_size 260
-
-#define path( FOLDERS... ) CHAIN(,, separator, FOLDERS )
-
-fn path_up_folder( byte ref const path )
-{
-	temp byte ref p = path + bytes_measure( path );
-	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
-	if( p > path ) val_of( p ) = eof_byte;
-}
-
-embed byte ref const path_get_name( byte ref const path )
-{
-	temp byte ref p = path + bytes_measure( path );
-	while( p > path and val_of( --p ) isnt '\\' and val_of( p ) isnt '/' );
-	if( p > path ) ++p;
-	out p;
-}
-
-embed byte ref const path_get_extension( byte ref const path )
-{
-	temp byte ref p = path + bytes_measure( path );
-	while( p > path and val_of( --p ) isnt '.' );
-	if( p > path ) ++p;
-	out p;
-}
-
-embed byte ref get_exe_path()
-{
-	perm byte exe_path[ path_max_size ] = "";
-	#if OS_LINUX
-		temp i8 _s = readlink( "/proc/self/exe", exe_path, path_max_size );
-	#elif OS_WINDOWS
-		GetModuleFileNameA( nothing, exe_path, path_max_size );
-	#endif
-	out exe_path;
-}
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// OS entries
-/// OS entries (folders/files)
-//
-
-#define max_entry_size 65
-
-group( entry_type )
-{
-	entry_unknown,
-	entry_folders,
-	entry_files,
-	entry_any
-};
-
-embed n2 get_entries( byte const ref const folder_path, byte entries[][ path_max_size ], n2 const max_entries, entry_type const type, flag const folder_separator )
-{
-	temp n2 count = 0;
-	temp n2 len = bytes_measure( folder_path );
-	perm byte path[ path_max_size ];
-	bytes_clear( path, path_max_size );
-	anon ref handle;
-	bytes_copy( path, folder_path, len );
-
-	#if OS_LINUX
-		struct dirent ref entry;
-		struct stat stat_buf;
-		handle = opendir( path );
-		if_nothing( handle ) out 0;
-		path[ len++ ] = '/';
-		while( ( entry = readdir( handle ) ) and count < max_entries )
-		{
-			next_if( entry->d_name[ 0 ] is '.' );
-			temp n2 entry_size = bytes_measure( entry->d_name ) + 1;
-			bytes_copy( path + len, entry->d_name, entry_size );
-
-			if( stat( path, ref_of( stat_buf ) ) is 0 )
-			{
-				temp flag is_dir = flag( S_ISDIR( stat_buf.st_mode ) );
-				if( type is entry_any or ( type is entry_folders and is_dir is yes ) or ( type is entry_files and is_dir is no ) )
-				{
-					bytes_copy( entries[ count ], entry->d_name, entry_size );
-					if( is_dir and folder_separator )
-					{
-						entries[ count ][ entry_size - 1 ] = val_of( separator );
-						entries[ count ][ entry_size ] = eof_byte;
-					}
-					++count;
-				}
-			}
-		}
-		closedir( handle );
-	#elif OS_WINDOWS
-		WIN32_FIND_DATA entry;
-		bytes_copy( path + len, "\\*", 3 );
-		handle = FindFirstFile( path, ref_of( entry ) );
-		if( handle is INVALID_HANDLE_VALUE ) out 0;
-
-		do
-		{
-			next_if( entry.cFileName[ 0 ] is '.' );
-			temp flag is_dir = flag( entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY );
-			if( type is entry_any or ( type is entry_folders and is_dir is yes ) or ( type is entry_files and is_dir is no ) )
-			{
-				temp n2 entry_size = bytes_measure( entry.cFileName ) + 1;
-				bytes_copy( entries[ count++ ], entry.cFileName, entry_size );
-				if( is_dir and folder_separator )
-				{
-					entries[ count ][ entry_size - 1 ] = val_of( separator );
-					entries[ count ][ entry_size ] = eof_byte;
-				}
-			}
-		}
-		while( count < max_entries and FindNextFile( handle, ref_of( entry ) ) );
-		FindClose( handle );
-	#endif
-	out count;
-}
-
-#define get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
-#define get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// folder
-/// folder
-//
-
-fn create_folder( byte const ref const path )
-{
-	#if OS_LINUX
-		mkdir( path, 0755 );
-	#else
-		CreateDirectoryA( path, nothing );
-	#endif
-}
-
-fn delete_folder( byte const ref const path )
-{
-	#if OS_LINUX
-		rmdir( path );
-	#else
-		RemoveDirectoryA( path );
-	#endif
-}
-
-embed flag folder_exists( byte const ref const path )
-{
-	#if OS_LINUX
-		struct stat st;
-		out( stat( path, ref_of( st ) ) is 0 and S_ISDIR( st.st_mode ) );
-	#elif OS_WINDOWS
-		DWORD attrib = GetFileAttributesA( path );
-		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
-	#endif
-}
-
-embed flag file_exists( byte const ref const path )
-{
-	#if OS_LINUX
-		struct stat st;
-		out( stat( path, ref_of( st ) ) is 0 and S_ISREG( st.st_mode ) );
-	#elif OS_WINDOWS
-		DWORD attrib = GetFileAttributesA( path );
-		out( attrib isnt INVALID_FILE_ATTRIBUTES and not ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
-	#endif
-}
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// file
-/// file
-//
-
-type( file )
-{
-	byte path[ path_max_size ];
-	n2 path_size;
-	os_file_handle handle;
-	byte ref mapped_bytes;
-	n8 size;
-};
-
-embed n8 get_file_size( byte const ref const file_path )
-{
-	#if OS_LINUX
-		struct stat st;
-		out pick( stat( file_path, ref_of( st ) ) is 0, to( n8 const, st.st_size ), 0 );
-	#elif OS_WINDOWS
-		WIN32_FILE_ATTRIBUTE_DATA fad;
-		out pick( GetFileAttributesExA( file_path, GetFileExInfoStandard, ref_of( fad ) ), to( n8 const, ( n8( fad.nFileSizeHigh ) << 32 ) | n8( fad.nFileSizeLow ) ), 0 );
-	#endif
-}
-
-embed file _open_file_loading( byte const ref const path, n4 const path_size )
-{
-	file f = { 0 };
-	f.size = get_file_size( path );
-	if( f.size is 0 )
-	{
-		out f;
-	}
-
-	f.handle = fopen( path, "rb" );
-	if_nothing( f.handle )
-	{
-		out f;
-	}
-
-	f.path_size = path_size;
-	bytes_copy( f.path, path, f.path_size );
-
-	out f;
-}
-
-embed file _open_file_saving( byte const ref const path, n4 const path_size )
-{
-	file f = { 0 };
-	f.handle = fopen( path, "wb" );
-	if_nothing( f.handle )
-	{
-		out f;
-	}
-
-	f.size = 0;
-	f.path_size = path_size;
-	bytes_copy( f.path, path, f.path_size );
-
-	out f;
-}
-
-#define open_file( PATH, PATH_SIZE... ) _open_file_loading( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
-#define new_file( PATH, PATH_SIZE... ) _open_file_saving( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
-
-embed file _map_file( byte const ref const path, n4 const path_size )
-{
-	file f = { 0 };
-
-	f.size = get_file_size( path );
-	if( f.size is 0 )
-	{
-		out f;
-	}
-
-	#if OS_LINUX
-		temp i4 fd = open( path, O_RDONLY );
-		out_if( fd is -1 ) f;
-
-		temp anon ref mapped_bytes = mmap( nothing, f.size, PROT_READ, MAP_PRIVATE, fd, 0 );
-		close( fd );
-		out_if( mapped_bytes is MAP_FAILED ) f;
-		f.mapped_bytes = to( byte ref, mapped_bytes );
-	#elif OS_WINDOWS
-		temp HANDLE file = CreateFileA( path, GENERIC_READ, FILE_SHARE_READ, nothing, OPEN_EXISTING, 0, nothing );
-		out_if( file is INVALID_HANDLE_VALUE ) f;
-
-		temp HANDLE mapping = CreateFileMapping( file, nothing, PAGE_READONLY, 0, 0, nothing );
-		CloseHandle( file );
-		if_nothing( mapping )
-		{
-			out f;
-		}
-
-		f.mapped_bytes = to( byte ref, MapViewOfFile( mapping, FILE_MAP_READ, 0, 0, 0 ) );
-		CloseHandle( mapping );
-	#endif
-
-	f.path_size = path_size;
-	bytes_copy( f.path, path, f.path_size );
-
-	out f;
-}
-#define map_file( PATH, PATH_SIZE... ) _map_file( PATH, DEFAULT( bytes_measure( PATH ), PATH_SIZE ) )
-
-fn file_load( file ref f, byte ref const out_bytes )
-{
-	if_nothing( f->handle ) out;
-
-	fseek( f->handle, 0, SEEK_SET );
-	fread( out_bytes, 1, f->size, f->handle );
-}
-
-fn file_save( file ref f, byte const ref const bytes, n8 const size )
-{
-	if_nothing( f->handle ) out;
-
-	fseek( f->handle, 0, SEEK_SET );
-	f->size = size;
-	fwrite( bytes, 1, f->size, f->handle );
-	fflush( f->handle );
-}
-
-fn file_clear( file ref f )
-{
-	f->handle = nothing;
-	bytes_clear( f->path, f->path_size );
-	f->path_size = 0;
-	f->size = 0;
-}
-
-fn file_close( file ref f )
-{
-	if_something( f->handle )
-	{
-		fclose( f->handle );
-	}
-
-	file_clear( f );
-}
-
-fn file_unmap( file ref f )
-{
-	if_something( f->mapped_bytes )
-	{
-		#if OS_LINUX
-			munmap( f->mapped_bytes, f->size );
-		#elif OS_WINDOWS
-			UnmapViewOfFile( f->mapped_bytes );
-		#endif
-	}
-
-	file_clear( f );
-}
-
-fn delete_file( const byte ref const path )
-{
-	remove( path );
-}
-
-//
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// milli-sleep
 /// milli-sleep
 //
 
 #if OS_LINUX
-	#define sleep( ms ) usleep( ( ms ) * 1000 )
+	#define sleep( MILLISECONDS ) usleep( ( MILLISECONDS ) * 1000 )
 #elif OS_WINDOWS
-	#define sleep( ms ) Sleep( ms )
-#endif
-
-//
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// thread
-/// thread
-//
-
-type_from( OS_PICK( pthread_t, HANDLE ) ) thread_id;
-
-type( thread );
-type_fn( anon ref, anon ref const ) thread_fn;
-
-type( thread )
-{
-	thread_id id;
-	thread_fn function;
-};
-
-embed thread _start_thread( thread_fn function, anon ref ref_param )
-{
-	thread out_thread;
-	out_thread.function = function;
-	out_thread.id = 0;
-	#if OS_WINDOWS
-		out_thread.id = CreateThread( nothing, 0, to( LPTHREAD_START_ROUTINE, out_thread.function ), ref_param, 0, nothing );
-	#elif OS_LINUX
-		pthread_create( ref_of( out_thread.id ), nothing, out_thread.function, ref_param );
-	#endif
-
-	out out_thread;
-}
-#define start_thread( FN, REF_PARAM ) _start_thread( to( thread_fn, FN ), to( anon ref, REF_PARAM ) )
-
-#if OS_LINUX
-	#define wait_for_thread( THREAD ) pthread_join( THREAD.id, nothing )
-#elif OS_WINDOWS
-	#define wait_for_thread( THREAD ) WaitForSingleObject( THREAD.id, INFINITE )
-#endif
-
-type_from( OS_PICK( pthread_mutex_t, CRITICAL_SECTION ) ) thread_lock;
-
-#if OS_LINUX
-	#define lock_thread( LOCK ) pthread_mutex_lock( ref_of( LOCK ) )
-	#define unlock_thread( LOCK ) pthread_mutex_unlock( ref_of( LOCK ) )
-	#define thread_add_lock( LOCK ) pthread_mutex_init( ref_of( LOCK ), nothing )
-	#define thread_remove_lock( LOCK ) pthread_mutex_destroy( ref_of( LOCK ) )
-#elif OS_WINDOWS
-	#define lock_thread( LOCK ) EnterCriticalSection( ref_of( LOCK ) )
-	#define unlock_thread( LOCK ) LeaveCriticalSection( ref_of( LOCK ) )
-	#define thread_add_lock( LOCK ) InitializeCriticalSection( ref_of( LOCK ) )
-	#define thread_remove_lock( LOCK ) DeleteCriticalSection( ref_of( LOCK ) )
+	#define sleep( MILLISECONDS ) Sleep( MILLISECONDS )
 #endif
 
 //
