@@ -11,21 +11,6 @@
 
 #pragma once
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////// dependencies
-/// dependencies
-//
-
-#define _GNU_SOURCE
-
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include <math.h>
-
-//
-
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// magic macros
 /// magic macros
 //
@@ -142,6 +127,25 @@
 #define H_VERSION_MINOR 1
 #define H_VERSION_PATCH 0
 #define H_VERSION AS_BYTES( H_VERSION_MAJOR ) "." AS_BYTES( H_VERSION_MINOR ) "." AS_BYTES( H_VERSION_PATCH )
+
+//
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////// dependencies
+/// dependencies
+//
+
+#define _GNU_SOURCE
+
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+#include <math.h>
+
+#pragma clang diagnostic ignored "-Wpragma-pack"
+#pragma clang diagnostic ignored "-Waddress-of-packed-member"
+#pragma clang diagnostic ignored "-Wtentative-definition-incomplete-type"
 
 //
 
@@ -413,14 +417,13 @@ type_from( i4 ) out_state;
 
 #define packed __attribute__( ( packed ) )
 #define variant struct
-#define global perm variant
 
 ////////////////////////////////
 // type
 
 #define type( NAME )\
 	type_from( variant NAME ) NAME;\
-	variant NAME
+	variant packed NAME
 
 #define _TEMP_type( NAME )\
 	type_from( variant NAME ) NAME;\
@@ -437,13 +440,18 @@ type_from( i4 ) out_state;
 
 #define fusion( NAME )\
 	type_from( union NAME ) NAME;\
-	union NAME
+	union packed NAME
 
 ////////////////////////////////
 // group
 
 #define group( NAME, TYPE... )\
-	PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum NAME
+	PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum packed NAME
+
+////////////////////////////////
+// global
+
+#define global perm variant packed
 
 //
 
@@ -999,8 +1007,8 @@ embed n2 os_get_entries( byte const ref const folder_path, byte entries[][ path_
 	out count;
 }
 
-#define os_get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
-#define os_get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
+#define os_get_files( PATH, OUT_ENTRIES, MAX_ENTRIES ) os_get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_files, no )
+#define os_get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) os_get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
 
 ////////////////////////////////
 // folder
@@ -1061,10 +1069,10 @@ embed flag os_file_exists( byte const ref const path )
 {
 	#if OS_LINUX
 		struct stat st;
-		out( stat( path, ref_of( st ) ) is 0 and S_ISREG( st.st_mode ) );
+		out stat( path, ref_of( st ) ) is 0 and S_ISREG( st.st_mode );
 	#elif OS_WINDOWS
 		DWORD attrib = GetFileAttributesA( path );
-		out ( attrib isnt INVALID_FILE_ATTRIBUTES and not ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
+		out attrib isnt INVALID_FILE_ATTRIBUTES and not( attrib & FILE_ATTRIBUTE_DIRECTORY );
 	#endif
 }
 
