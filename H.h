@@ -433,7 +433,7 @@ type_from( i4 ) out_state;
 
 #define make( TYPE, ELEMENT_VALUES... ) ( ( TYPE ) { ELEMENT_VALUES } )
 
-#define wipe( VAL ) VAL = make( type_of( VAL ) )
+#define wipe( VAL ) VAL = make( type_of( VAL ), 0 )
 
 ////////////////////////////////
 // fusion
@@ -445,8 +445,7 @@ type_from( i4 ) out_state;
 ////////////////////////////////
 // group
 
-#define group( NAME, TYPE... )\
-	PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum packed NAME
+#define group( NAME, TYPE... ) PASTE_IF_INPUTS( type_from( DEFAULT( n1, TYPE ) ) NAME;, NAME ) enum packed NAME
 
 ////////////////////////////////
 // global
