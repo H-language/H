@@ -325,7 +325,15 @@ type_from( char ) byte;
 ////////////////////////////////
 // bits
 
-#define n_to_bits( N ) pick( ( N ) <= 1, 1, ( 32 - __builtin_clz( ( N ) - 1 ) ) )
+#if COMPILER_TCC
+	#define n_to_bits( n ) pick( ( n ) <= 2, 1, pick( ( n ) <= 4, 2, pick( ( n ) <= 8, 3, pick( ( n ) <= 16, 4, pick( ( n ) <= 32, 5, pick( ( n ) <= 64, 6, pick( ( n ) <= 128, 7, pick( ( n ) <= 256, 8, pick( ( n ) <= 512, 9, pick( ( n ) <= 1024, 10, pick( ( n ) <= 2048, 11, pick( ( n ) <= 4096, 12, pick( ( n ) <= 8192, 13, pick( ( n ) <= 16384, 14, pick( ( n ) <= 32768, 15, pick( ( n ) <= 65536, 16, 32 ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
+#else
+	#define n_to_bits( N ) pick( ( N ) <= 2, 1, ( 32 - __builtin_clz( ( N ) - 1 ) ) )
+#endif
+
+#define bits( N ) : n_to_bits( N )
+
+#define bits_flag : 1
 
 ////////////////////////////////
 // natural 1/2/4/8, integer 1/2/4/8, rational 4/8
