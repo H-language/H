@@ -844,7 +844,8 @@ type_from( i4 ) out_state;
 /// allocated ref
 //
 
-#define _alloc_page_round( SIZE ) ( ( ( SIZE ) + 4095 ) & ~ 4095 )
+#define _ALLOC_PAGE_MASK 4095
+#define _alloc_page_round( SIZE ) ( ( ( SIZE ) + _ALLOC_PAGE_MASK ) & ~ _ALLOC_PAGE_MASK )
 #define _ALLOC_HEADER size_of( n8 )
 #define _alloc_base( REF ) ( to( n1 ref, REF ) - _ALLOC_HEADER )
 #define _alloc_total( REF ) val_of( to( n8 ref, _alloc_base( REF ) ) )
@@ -872,26 +873,41 @@ fn _free( anon ref const r )
 	#endif
 }
 
-embed anon ref const _ref_resize( anon ref const r, n8 const new_size )
+embed anon ref const _ref_resize( anon ref const r, n8 const new_size, flag const preserve )
 {
+	out_if( new_size > n8_max_val - _ALLOC_HEADER - _ALLOC_PAGE_MASK ) nothing;
 	out_if( r is nothing ) _alloc( new_size );
+
+	temp n8 const old_total = _alloc_total( r );
 	temp n8 const new_total = _alloc_page_round( new_size + _ALLOC_HEADER );
+	out_if( new_total is old_total ) r;
+
 	#if OS_LINUX
-		temp anon ref const p = mremap( _alloc_base( r ), _alloc_total( r ), new_total, MREMAP_MAYMOVE );
-		out_if( p is MAP_FAILED ) nothing;
-	#elif OS_WINDOWS
-		temp anon ref const p = _alloc( new_size );
-		out_if( p is nothing ) nothing;
-		bytes_copy( p, r, _alloc_total( r ) - _ALLOC_HEADER );
-		_free( r );
+		if( preserve is yes )
+		{
+			temp anon ref const p = mremap( _alloc_base( r ), old_total, new_total, MREMAP_MAYMOVE );
+			out_if( p is MAP_FAILED ) nothing;
+			val_of( to( n8 ref, p ) ) = new_total;
+			out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+		}
 	#endif
-	val_of( to( n8 ref, p ) ) = new_total;
-	out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+	temp anon ref const p = _alloc( new_size );
+	out_if( p is nothing ) nothing;
+	
+	#if OS_WINDOWS
+		if( preserve is yes )
+		{
+			temp n8 const old_size = old_total - _ALLOC_HEADER;
+			bytes_copy( p, r, pick( new_size < old_size, new_size, old_size ) );
+		}
+	#endif
+	_free( r );
+	out p;
 }
 
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
 #define delete_ref( REF ) START_DEF { if_something( REF ) { _free( REF ); REF = nothing; } } END_DEF
-#define ref_resize( REF, NEW_SIZE ) to( type_of( REF ), _ref_resize( REF, NEW_SIZE ) )
+#define ref_resize( REF, NEW_SIZE, PRESERVE ) to( type_of( REF ), _ref_resize( REF, NEW_SIZE, PRESERVE ) )
 
 //
 
