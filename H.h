@@ -854,59 +854,59 @@ embed anon ref _alloc( n8 const size )
 {
 	temp n8 const total = _alloc_page_round( size + _ALLOC_HEADER );
 	#if OS_LINUX
-		temp anon ref const p = mmap( nothing, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
-		out_if( p is MAP_FAILED ) nothing;
+		temp anon ref const mem = mmap( nothing, total, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0 );
+		out_if( mem is MAP_FAILED ) nothing;
 	#elif OS_WINDOWS
-		temp anon ref const p = VirtualAlloc( nothing, total, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
-		out_if( p is nothing ) nothing;
+		temp anon ref const mem = VirtualAlloc( nothing, total, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE );
+		out_if( mem is nothing ) nothing;
 	#endif
-	val_of( to( n8 ref, p ) ) = total;
-	out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+	val_of( to( n8 ref, mem ) ) = total;
+	out to( anon ref, to( n1 ref, mem ) + _ALLOC_HEADER );
 }
 
-fn _free( anon ref const r )
+fn _free( anon ref const anon_ref )
 {
 	#if OS_LINUX
-		munmap( _alloc_base( r ), _alloc_total( r ) );
+		munmap( _alloc_base( anon_ref ), _alloc_total( anon_ref ) );
 	#elif OS_WINDOWS
-		VirtualFree( _alloc_base( r ), 0, MEM_RELEASE );
+		VirtualFree( _alloc_base( anon_ref ), 0, MEM_RELEASE );
 	#endif
 }
 
-embed anon ref const _ref_resize( anon ref const r, n8 const new_size, flag const preserve )
+embed anon ref const _ref_resize( anon ref const anon_ref, n8 const new_size, flag const preserve )
 {
 	out_if( new_size > n8_max_val - _ALLOC_HEADER - _ALLOC_PAGE_MASK ) nothing;
-	out_if( r is nothing ) _alloc( new_size );
+	out_if( anon_ref is nothing ) _alloc( new_size );
 
-	temp n8 const old_total = _alloc_total( r );
+	temp n8 const old_total = _alloc_total( anon_ref );
 	temp n8 const new_total = _alloc_page_round( new_size + _ALLOC_HEADER );
-	out_if( new_total is old_total ) r;
+	out_if( new_total is old_total ) anon_ref;
 
 	#if OS_LINUX
 		if( preserve is yes )
 		{
-			temp anon ref const p = mremap( _alloc_base( r ), old_total, new_total, MREMAP_MAYMOVE );
-			out_if( p is MAP_FAILED ) nothing;
-			val_of( to( n8 ref, p ) ) = new_total;
-			out to( anon ref, to( n1 ref, p ) + _ALLOC_HEADER );
+			temp anon ref const new_mem = mremap( _alloc_base( anon_ref ), old_total, new_total, MREMAP_MAYMOVE );
+			out_if( new_mem is MAP_FAILED ) nothing;
+			val_of( to( n8 ref, new_mem ) ) = new_total;
+			out to( anon ref, to( n1 ref, new_mem ) + _ALLOC_HEADER );
 		}
 	#endif
-	temp anon ref const p = _alloc( new_size );
-	out_if( p is nothing ) nothing;
-	
+	temp anon ref const new_mem = _alloc( new_size );
+	out_if( new_mem is nothing ) nothing;
+
 	#if OS_WINDOWS
 		if( preserve is yes )
 		{
 			temp n8 const old_size = old_total - _ALLOC_HEADER;
-			bytes_copy( p, r, pick( new_size < old_size, new_size, old_size ) );
+			bytes_copy( new_mem, anon_ref, pick( new_size < old_size, new_size, old_size ) );
 		}
 	#endif
-	_free( r );
-	out p;
+	_free( anon_ref );
+	out new_mem;
 }
 
 #define new_ref( TYPE, AMOUNT... ) to( TYPE ref, _alloc( size_of( TYPE ) * DEFAULT( 1, AMOUNT ) ) )
-#define delete_ref( REF ) START_DEF { if_something( REF ) { _free( REF ); REF = nothing; } } END_DEF
+#define delete_ref( REF ) START_DEF { skip_if_nothing( REF ); _free( REF ); REF = nothing; } END_DEF
 #define ref_resize( REF, NEW_SIZE, PRESERVE ) to( type_of( REF ), _ref_resize( REF, NEW_SIZE, PRESERVE ) )
 
 //
