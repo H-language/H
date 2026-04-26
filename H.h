@@ -134,7 +134,9 @@
 /// dependencies
 //
 
-#define _GNU_SOURCE
+#ifndef _GNU_SOURCE
+	#define _GNU_SOURCE
+#endif
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -982,7 +984,7 @@ embed n2 os_get_entries( byte const ref const folder_path, byte entries[][ path_
 	n2 count = 0,
 	len = bytes_measure( folder_path );
 	perm byte path[ path_max_size ];
-	bytes_copy( path, folder_path, len );
+	bytes_paste( path, folder_path );
 	#if OS_LINUX
 		struct dirent ref entry;
 		struct stat stat_buf;
