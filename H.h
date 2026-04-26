@@ -178,6 +178,7 @@
 	#define WIN32_LEAN_AND_MEAN
 	#define NOMINMAX
 	#include <windows.h>
+	#include <io.h>
 
 #elif defined( __APPLE__ )
 	#undef OS_MACOS
@@ -1034,38 +1035,6 @@ embed n2 os_get_entries( byte const ref const folder_path, byte entries[][ path_
 #define os_get_folders( PATH, OUT_ENTRIES, MAX_ENTRIES, FOLDER_SEPARATOR... ) os_get_entries( PATH, OUT_ENTRIES, MAX_ENTRIES, entry_folders, DEFAULT( yes, FOLDER_SEPARATOR ) )
 
 ////////////////////////////////
-// folder
-
-fn os_create_folder( byte const ref const path )
-{
-	#if OS_LINUX
-		mkdir( path, 0755 );
-	#else
-		CreateDirectoryA( path, nothing );
-	#endif
-}
-
-fn os_delete_folder( byte const ref const path )
-{
-	#if OS_LINUX
-		rmdir( path );
-	#else
-		RemoveDirectoryA( path );
-	#endif
-}
-
-embed flag os_folder_exists( byte const ref const path )
-{
-	#if OS_LINUX
-		struct stat st;
-		out( stat( path, ref_of( st ) ) is 0 and S_ISDIR( st.st_mode ) );
-	#elif OS_WINDOWS
-		DWORD attrib = GetFileAttributesA( path );
-		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
-	#endif
-}
-
-////////////////////////////////
 // file
 
 type( file )
@@ -1199,6 +1168,69 @@ fn file_unmap( file ref f )
 	file_clear( f );
 }
 
+////////////////////////////////
+// folder
+
+fn os_create_folder( byte const ref const path )
+{
+	#if OS_LINUX
+		mkdir( path, 0755 );
+	#else
+		CreateDirectoryA( path, nothing );
+	#endif
+}
+
+embed flag os_folder_exists( byte const ref const path )
+{
+	#if OS_LINUX
+		struct stat st;
+		out( stat( path, ref_of( st ) ) is 0 and S_ISDIR( st.st_mode ) );
+	#elif OS_WINDOWS
+		DWORD attrib = GetFileAttributesA( path );
+		out( attrib isnt INVALID_FILE_ATTRIBUTES and ( attrib & FILE_ATTRIBUTE_DIRECTORY ) );
+	#endif
+}
+
+fn os_delete_folder( byte const ref const path )
+{
+	out_if( os_folder_exists( path ) );
+
+	byte entries[ 64 ][ path_max_size ];
+	byte child[ path_max_size ];
+	temp n2 const path_len = bytes_measure( path );
+	bytes_copy( child, path, path_len );
+	child[ path_len ] = val_of( separator );
+	temp n2 count = 0;
+
+	while( ( count = os_get_files( path, entries, 64 ) ) > 0 )
+	{
+		iter( file_id, count )
+		{
+			bytes_copy( child + path_len + 1, entries[ file_id ], bytes_measure( entries[ file_id ] ) + 1 );
+			os_delete_file( child );
+		}
+	}
+
+	while( ( count = os_get_folders( path, entries, 64, no ) ) > 0 )
+	{
+		iter( file_id, count )
+		{
+			bytes_copy( child + path_len + 1, entries[ file_id ], bytes_measure( entries[ file_id ] ) + 1 );
+			os_delete_folder( child );
+		}
+	}
+
+	#if OS_LINUX
+		rmdir( path );
+	#else
+		RemoveDirectoryA( path );
+	#endif
+
+	while( os_folder_exists( path ) )
+	{
+	};
+}
+
 //
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// terminal
@@ -1217,9 +1249,62 @@ fn terminal_get_input( byte ref const bytes, n2 const bytes_size )
 // command
 
 #define command( COMMAND ) system( COMMAND )
-
 #define command_read_open( COMMAND ) popen( COMMAND, "r" )
 #define command_read_close( OS_FILE_HANDLE ) pclose( OS_FILE_HANDLE )
+
+embed out_state command_silent( byte const ref const command )
+{
+	#if OS_LINUX
+		out command( command );
+	#elif OS_WINDOWS
+		byte buf[ 1024 ] = "cmd.exe /c ";
+		bytes_paste( buf + 11, command );
+
+		STARTUPINFOA si = { sizeof( si ), .dwFlags = STARTF_USESHOWWINDOW, .wShowWindow = SW_HIDE };
+		PROCESS_INFORMATION pi;
+		if( not CreateProcessA( nothing, buf, nothing, nothing, FALSE, CREATE_NEW_CONSOLE, nothing, nothing, ref_of( si ), ref_of( pi ) ) )
+		{
+			out -1;
+		}
+
+		WaitForSingleObject( pi.hProcess, INFINITE );
+		DWORD code;
+		GetExitCodeProcess( pi.hProcess, ref_of( code ) );
+		CloseHandle( pi.hProcess );
+		CloseHandle( pi.hThread );
+		out code;
+	#endif
+}
+
+embed os_file_handle command_read_open_silent( byte const ref const command )
+{
+	#if OS_LINUX
+		out command_read_open( command );
+	#elif OS_WINDOWS
+		byte buf[ 1024 ] = "cmd.exe /c ";
+		bytes_paste( buf + 11, command );
+
+		SECURITY_ATTRIBUTES sa = { sizeof( sa ), nothing, TRUE };
+		HANDLE rd, wr;
+		CreatePipe( ref_of( rd ), ref_of( wr ), ref_of( sa ), 0 );
+		SetHandleInformation( rd, HANDLE_FLAG_INHERIT, 0 );
+
+		HANDLE nul_in = CreateFileA( "NUL", GENERIC_READ, FILE_SHARE_READ, ref_of( sa ), OPEN_EXISTING, 0, nothing );
+
+		STARTUPINFOA si = { sizeof( si ), .dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES, .wShowWindow = SW_HIDE, .hStdInput = nul_in, .hStdOutput = wr, .hStdError = wr };
+		PROCESS_INFORMATION pi;
+		CreateProcessA( nothing, buf, nothing, nothing, TRUE, CREATE_NEW_CONSOLE, nothing, nothing, ref_of( si ), ref_of( pi ) );
+
+		CloseHandle( wr );
+		CloseHandle( nul_in );
+		CloseHandle( pi.hThread );
+		CloseHandle( pi.hProcess );
+
+		out _fdopen( _open_osfhandle( to( intptr_t, rd ), 0 ), "r" );
+	#endif
+}
+
+#define command_read_close_silent( OS_FILE_HANDLE ) OS_PICK( command_read_close( OS_FILE_HANDLE ), fclose( OS_FILE_HANDLE ) )
 
 ////////////////////////////////
 // print
@@ -1568,8 +1653,6 @@ FUNCTION_GROUP_R( 8 );
 #elif OS_WINDOWS
 	#define sleep( MILLISECONDS ) Sleep( MILLISECONDS )
 #endif
-
-//
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////// start
 /// start
