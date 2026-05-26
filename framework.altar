@@ -1,0 +1,20 @@
+properties
+	H-language/H
+	0.1.0
+
+Linux
+	-lm
+
+Windows
+	-luser32
+
+example
+`
+#include <H.h>
+
+start
+{
+	print( "hello H!" newline );
+	out success;
+}
+`
