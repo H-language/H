@@ -358,8 +358,10 @@
 #pragma region | - with
 
 #define with switch
-#define when( INPUTS... ) CHAIN( case, :,, INPUTS )
-#define other default:
+#define when( INPUTS... ) skip; CHAIN( case, :,, INPUTS )
+#define then_when( INPUTS... ) CHAIN( case, :,, INPUTS )
+#define other skip; default:
+#define then_other default:
 
 #pragma endregion
 
@@ -926,6 +928,85 @@ type( os_file )
 #pragma endregion
 
 ////////////////
+#pragma region | - to .h
+
+fn bytes_to_h( const byte ref const in_bytes, const n4 in_size, byte ref ref out_ref )
+{
+	bytes_paste_move( val_of( out_ref ), "\"" );
+
+	iter( b, in_size )
+	{
+		byte const pbyte = in_bytes[ b ];
+		with( pbyte )
+		{
+			when( '\0' )
+			{
+				if_all( b + 1 < in_size, in_bytes[ b + 1 ] >= '0', in_bytes[ b + 1 ] <= '9' )
+				{
+					bytes_paste_move( val_of( out_ref ), "\\000" );
+				}
+				else
+				{
+					bytes_paste_move( val_of( out_ref ), "\\0" );
+				}
+				skip;
+			}
+
+			when( 0x1A )
+			{
+				if_all( b + 1 < in_size, in_bytes[ b + 1 ] >= '0', in_bytes[ b + 1 ] <= '7' )
+				{
+					bytes_paste_move( val_of( out_ref ), "\\032" );
+				}
+				else
+				{
+					bytes_paste_move( val_of( out_ref ), "\\32" );
+				}
+				skip;
+			}
+
+			when( '"' )
+			{
+				bytes_paste_move( val_of( out_ref ), "\\\"" );
+				skip;
+			}
+
+			when( '\\' )
+			{
+				bytes_paste_move( val_of( out_ref ), "\\\\" );
+				skip;
+			}
+
+			when( '\r' )
+			{
+				bytes_paste_move( val_of( out_ref ), "\\r" );
+				skip;
+			}
+
+			when( '\n' )
+			{
+				bytes_paste_move( val_of( out_ref ), "\\n" );
+				skip;
+			}
+
+			other
+			{
+				bytes_set_move( val_of( out_ref ), pbyte );
+			}
+		}
+
+		if( ( ( b + 1 ) mod 4000 ) is 0 and b + 1 < in_size )
+		{
+			bytes_paste_move( val_of( out_ref ), "\"\n\"" );
+		}
+	}
+
+	bytes_paste_move( val_of( out_ref ), "\"" );
+}
+
+#pragma endregion
+////////////////
+
 #pragma region | - natural
 
 #define n1_to_bytes( VAL, TO_REF ) _GEN_N_TO_BYTES(, 1, 3, VAL, TO_REF )
