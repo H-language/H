@@ -60,6 +60,14 @@
 	#undef OS_MACOS
 	#define OS_MACOS 1
 	#define OS_NAME "macOS"
+	// macOS is POSIX: share the Linux code paths (mmap/dirent/stat/...).
+	#undef OS_LINUX
+	#define OS_LINUX 1
+	#include <sys/stat.h>
+	#include <sys/mman.h>
+	#include <dirent.h>
+	#include <fcntl.h>
+	#include <unistd.h>
 
 #else
 	#undef OS_UNKNOWN
@@ -1123,7 +1131,7 @@ embed anon ref const _ref_resize( anon ref const anon_ref, n8 const new_size, fl
 	n8 const new_total = _alloc_page_round( new_size + _ALLOC_HEADER );
 	out_if( new_total is old_total ) anon_ref;
 
-	#if OS_LINUX
+	#if OS_LINUX && !OS_MACOS
 		if( preserve is yes )
 		{
 			anon ref const new_alloc = mremap( _alloc_base( anon_ref ), old_total, new_total, MREMAP_MAYMOVE );
@@ -1135,7 +1143,7 @@ embed anon ref const _ref_resize( anon ref const anon_ref, n8 const new_size, fl
 	anon ref const new_alloc = _alloc( new_size );
 	out_if( new_alloc is nothing ) nothing;
 
-	#if OS_WINDOWS
+	#if OS_WINDOWS || OS_MACOS
 		if( preserve is yes )
 		{
 			n8 const old_size = old_total - _ALLOC_HEADER;
@@ -1245,7 +1253,8 @@ embed out_state command_silent( byte const ref const command, flag const detach 
 		bytes_paste_move( command_bytes_ref, pick( detach is yes, "setsid ", "" ) );
 		bytes_paste_move( command_bytes_ref, command );
 		bytes_paste_move( command_bytes_ref, pick( detach is yes, " </dev/null >/dev/null 2>&1 &", " >/dev/null 2>&1" ) );
-		out to( out_state, WEXITSTATUS( command( command_bytes ) ) );
+		int command_status = command( command_bytes );
+		out to( out_state, WEXITSTATUS( command_status ) );
 	#elif OS_WINDOWS
 		byte command_bytes[ 1024 ] = { 0 };
 		byte ref command_bytes_ref = command_bytes;
